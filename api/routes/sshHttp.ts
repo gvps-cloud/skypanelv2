@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken, requireOrganization, AuthenticatedRequest } from '../middleware/auth.js';
+import { requireVpsEnabledForUsers } from '../middleware/vpsHosting.js';
 import { query } from '../lib/database.js';
 import { linodeService } from '../services/linodeService.js';
 import { decryptSecret } from '../lib/crypto.js';
@@ -8,7 +9,7 @@ import crypto from 'crypto';
 
 const router = Router();
 
-router.use(authenticateToken, requireOrganization);
+router.use(authenticateToken, requireOrganization, requireVpsEnabledForUsers);
 
 interface SshSession {
   id: string;

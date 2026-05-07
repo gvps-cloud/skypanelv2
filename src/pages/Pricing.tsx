@@ -264,6 +264,7 @@ const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
 
 const PricingPage: React.FC = () => {
   const [vpsPlans, setVpsPlans] = useState<VPSPlan[]>([]);
+  const [vpsProductEnabled, setVpsProductEnabled] = useState(true);
   const [hostingEnabled, setHostingEnabled] = useState(false);
   const [hostingPlans, setHostingPlans] = useState<HostingPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -280,6 +281,12 @@ const PricingPage: React.FC = () => {
   }, [hostingEnabled, activeProduct]);
 
   useEffect(() => {
+    if (!vpsProductEnabled && activeProduct === 'vps') {
+      setActiveProduct(hostingEnabled ? 'hosting' : 'vps');
+    }
+  }, [vpsProductEnabled, hostingEnabled, activeProduct]);
+
+  useEffect(() => {
     loadPricingData();
   }, []);
 
@@ -294,12 +301,16 @@ const PricingPage: React.FC = () => {
       ]);
 
       if (vpsResult.status === 'fulfilled') {
-        console.log('VPS plans loaded:', vpsResult.value.plans?.length || 0);
-        setVpsPlans(vpsResult.value.plans || []);
+        const vpsPayload = vpsResult.value as { enabled?: boolean; plans?: VPSPlan[] };
+        const vpsOn = vpsPayload.enabled !== false;
+        setVpsProductEnabled(vpsOn);
+        console.log('VPS plans loaded:', vpsPayload.plans?.length || 0);
+        setVpsPlans(vpsPayload.plans || []);
       } else {
         console.error('Failed to load VPS pricing data:', vpsResult.reason);
         setError(vpsResult.reason instanceof Error ? vpsResult.reason.message : 'Failed to load pricing information');
         setVpsPlans([]);
+        setVpsProductEnabled(false);
       }
 
       if (hostingResult.status === 'fulfilled') {
@@ -314,6 +325,7 @@ const PricingPage: React.FC = () => {
       console.error('Failed to load pricing data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load pricing information');
       setVpsPlans([]);
+      setVpsProductEnabled(false);
       setHostingEnabled(false);
       setHostingPlans([]);
     } finally {
@@ -509,6 +521,13 @@ const PricingPage: React.FC = () => {
               </Alert>
             )}
 
+            {!vpsProductEnabled && !hostingEnabled ? (
+              <Card className="mx-auto max-w-2xl border-primary/25">
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  No public pricing catalogs are enabled on this deployment.
+                </CardContent>
+              </Card>
+            ) : (
             <Tabs
               value={activeProduct}
               onValueChange={(value) => setActiveProduct(value as 'vps' | 'hosting')}
@@ -521,19 +540,24 @@ const PricingPage: React.FC = () => {
                       Product catalog
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {hostingEnabled
+                      {hostingEnabled && vpsProductEnabled
                         ? "Switch between VPS compute plans and Enhance hosting packages."
-                        : "Choose from our VPS instances with transparent hourly and monthly billing."
-                      }
+                        : hostingEnabled
+                          ? "Enhance hosting packages available on this platform."
+                          : vpsProductEnabled
+                            ? "Choose from our VPS instances with transparent hourly and monthly billing."
+                            : "Product pricing will appear here when offerings are enabled for this deployment."}
                     </p>
                   </div>
                   <TabsList className="h-12 rounded-sm border border-border/60 bg-muted/50 p-1.5">
+                    {vpsProductEnabled && (
                     <TabsTrigger
                       value="vps"
                       className="rounded-sm px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                     >
                       VPS
                     </TabsTrigger>
+                    )}
                     {hostingEnabled && (
                       <TabsTrigger
                         value="hosting"
@@ -809,6 +833,7 @@ const PricingPage: React.FC = () => {
                 </TabsContent>
               )}
             </Tabs>
+            )}
           </div>
         </section>
 

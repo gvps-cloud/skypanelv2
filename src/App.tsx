@@ -75,7 +75,7 @@ import Maintenance from "./pages/Maintenance";
 import { TerminalErrorScreen } from "./components/terminal";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
-import { useHostingStatus } from "./hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "./hooks/useHosting";
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -189,6 +189,24 @@ function HostingEnabledRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!hostingStatus?.enabled) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function VpsEnabledRoute({ children }: { children: React.ReactNode }) {
+  const { data: vpsStatus, isLoading } = useVpsProductStatus();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!vpsStatus?.enabled) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -357,17 +375,21 @@ function AppRoutes() {
         <Route
           path="/vps"
           element={
-            <ProtectedRoute>
-              <VPS />
-            </ProtectedRoute>
+            <VpsEnabledRoute>
+              <ProtectedRoute>
+                <VPS />
+              </ProtectedRoute>
+            </VpsEnabledRoute>
           }
         />
         <Route
           path="/vps/:id"
           element={
-            <ProtectedRoute>
-              <VPSDetail />
-            </ProtectedRoute>
+            <VpsEnabledRoute>
+              <ProtectedRoute>
+                <VPSDetail />
+              </ProtectedRoute>
+            </VpsEnabledRoute>
           }
         />
         <Route
@@ -483,9 +505,11 @@ function AppRoutes() {
         <Route
           path="/egress-credits"
           element={
-            <ProtectedRoute>
-              <EgressCredits />
-            </ProtectedRoute>
+            <VpsEnabledRoute>
+              <ProtectedRoute>
+                <EgressCredits />
+              </ProtectedRoute>
+            </VpsEnabledRoute>
           }
         />
         <Route

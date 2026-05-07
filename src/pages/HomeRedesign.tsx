@@ -517,29 +517,53 @@ export default function HomeRedesign() {
   const [hostingLowestPrice, setHostingLowestPrice] = useState<number | null>(null);
   const [hostingCheapestPlan, setHostingCheapestPlan] = useState<any | null>(null);
   const [vpsCheapestPlan, setVpsCheapestPlan] = useState<any | null>(null);
+  const [vpsProductEnabled, setVpsProductEnabled] = useState(true);
   const [heroReducedMotion, setHeroReducedMotion] = useState(false);
 
-  // Filter hosting-related content based on enabled state
-  const visibleCapabilityCards = hostingEnabled
-    ? capabilityCards
-    : capabilityCards.filter((card) => card.label !== "Web Hosting");
+  // Filter hosting/VPS-related content based on enabled state
+  const visibleCapabilityCards = useMemo(() => {
+    let cards = capabilityCards;
+    if (!hostingEnabled) {
+      cards = cards.filter((card) => card.label !== "Web Hosting");
+    }
+    if (!vpsProductEnabled) {
+      cards = cards.filter((card) => card.label !== "VPS Compute");
+    }
+    return cards;
+  }, [hostingEnabled, vpsProductEnabled]);
 
-  const visiblePlatformCards = hostingEnabled
-    ? platformCards
-    : platformCards.filter((card) =>
-        card.title !== "Browser-Based SSH & Hosting Tools" &&
-        card.title !== "Enhance Web Hosting"
+  const visiblePlatformCards = useMemo(() => {
+    let cards = platformCards;
+    if (!hostingEnabled) {
+      cards = cards.filter(
+        (card) =>
+          card.title !== "Browser-Based SSH & Hosting Tools" &&
+          card.title !== "Enhance Web Hosting",
       );
+    }
+    if (!vpsProductEnabled) {
+      cards = cards.filter(
+        (card) =>
+          card.title !== "Lightning Fast Setup" &&
+          card.title !== "Browser-Based SSH & Hosting Tools",
+      );
+    }
+    return cards;
+  }, [hostingEnabled, vpsProductEnabled]);
 
-  const visibleSolutionCards = hostingEnabled
-    ? solutionCards
-    : solutionCards
-        .filter((card) => card.title !== "Web Hosting Customers")
-        .map((card) => ({
-          ...card,
-          detail: card.detailNoHosting ?? card.detail,
-          bullets: card.bulletsNoHosting ?? card.bullets,
-        }));
+  const visibleSolutionCards = useMemo(
+    () =>
+      hostingEnabled
+        ? solutionCards
+        : solutionCards
+            .filter((card) => card.title !== "Web Hosting Customers")
+            .map((card) => ({
+              ...card,
+              detail: card.detailNoHosting ?? card.detail,
+              bullets: card.bulletsNoHosting ?? card.bullets,
+            })),
+    [hostingEnabled],
+  );
 
   const visibleFaqs = hostingEnabled
     ? faqs
@@ -575,7 +599,7 @@ export default function HomeRedesign() {
           apiClient.get<{ success?: boolean; regions?: any[]; count?: number }>(
             "/pricing/public-regions",
           ),
-          apiClient.get<{ plans?: any[] }>("/pricing/vps"),
+          apiClient.get<{ enabled?: boolean; plans?: any[] }>("/pricing/vps"),
           apiClient
             .get<{ enabled?: boolean; plans?: any[] }>("/pricing/hosting")
             .catch(() => ({ enabled: false, plans: [] })),
@@ -594,6 +618,7 @@ export default function HomeRedesign() {
         }
 
         if (priceData) {
+          setVpsProductEnabled(priceData.enabled !== false);
           const plans = priceData.plans;
           if (Array.isArray(plans)) {
             const sorted = plans

@@ -3,6 +3,7 @@ import { query } from "../lib/database.js";
 import { linodeService } from "../services/linodeService.js";
 import { getSpeedTestUrl, parseStoredAllowedRegions, normalizeRegionList } from "../lib/providerRegions.js";
 import { EnhanceToggleService } from "../services/enhanceToggle.js";
+import { LinodeToggleService } from "../services/linodeToggle.js";
 
 const router = express.Router();
 
@@ -182,6 +183,11 @@ router.get("/public-regions", async (_req: Request, res: Response) => {
  */
 router.get("/vps", async (_req: Request, res: Response) => {
   try {
+    const vpsEnabled = await LinodeToggleService.isEffectivelyEnabled();
+    if (!vpsEnabled) {
+      return res.json({ enabled: false, plans: [] });
+    }
+
     const result = await query(
       `SELECT
          id,
@@ -236,7 +242,7 @@ router.get("/vps", async (_req: Request, res: Response) => {
       network_out: networkOutMap[row.provider_plan_id] || 0,
     }));
 
-    res.json({ plans });
+    res.json({ enabled: true, plans });
   } catch (error) {
     console.error("Public VPS plans fetch error:", error);
     const message =
@@ -320,6 +326,11 @@ router.get("/category-mappings", async (_req: Request, res: Response) => {
  */
 router.get("/", async (_req: Request, res: Response) => {
   try {
+    const vpsEnabled = await LinodeToggleService.isEffectivelyEnabled();
+    if (!vpsEnabled) {
+      return res.json({ vps: [] });
+    }
+
     // Fetch VPS plans
     const vpsResult = await query(
       `SELECT

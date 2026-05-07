@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
 import {
   ArrowUpRight,
   Bell,
@@ -20,13 +20,21 @@ import {
 } from "lucide-react";
 
 import { BRAND_NAME } from "@/lib/brand";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 
 function SkyPanelPreview() {
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsProductEnabled = vpsProductStatus?.enabled === true;
 
   const [activeView, setActiveView] = useState("Dashboard");
+
+  useEffect(() => {
+    if (!vpsProductEnabled && activeView === "Compute") {
+      setActiveView("Dashboard");
+    }
+  }, [vpsProductEnabled, activeView]);
   const [selectedVps, setSelectedVps] = useState("prod-api-01");
   const [walletBalance, setWalletBalance] = useState(128.4);
   const [activityFeed, setActivityFeed] = useState(
@@ -118,6 +126,7 @@ function SkyPanelPreview() {
         setActiveView("Compute");
         addActivity("Deployment wizard opened for a new VPS", "VPS event");
       },
+      hidden: !vpsProductEnabled,
     },
     {
       icon: Globe2,
@@ -152,24 +161,24 @@ function SkyPanelPreview() {
 
   const quickActions = allQuickActions.filter((a) => !a.hidden);
 
-  const navItems = hostingEnabled
-    ? [
-        { icon: LayoutDashboard, label: "Dashboard" },
-        { icon: Server, label: "Compute" },
-        { icon: Globe2, label: "Web Hosting" },
-        { icon: Building2, label: "Organizations" },
-        { icon: FileText, label: "Notes" },
-        { icon: Activity, label: "Activity" },
-        { icon: CreditCard, label: "Billing" },
-      ]
-    : [
-        { icon: LayoutDashboard, label: "Dashboard" },
-        { icon: Server, label: "Compute" },
-        { icon: Building2, label: "Organizations" },
-        { icon: FileText, label: "Notes" },
-        { icon: Activity, label: "Activity" },
-        { icon: CreditCard, label: "Billing" },
-      ];
+  const navItems = useMemo(() => {
+    const items: { icon: ComponentType<{ className?: string }>; label: string }[] = [
+      { icon: LayoutDashboard, label: "Dashboard" },
+    ];
+    if (vpsProductEnabled) {
+      items.push({ icon: Server, label: "Compute" });
+    }
+    if (hostingEnabled) {
+      items.push({ icon: Globe2, label: "Web Hosting" });
+    }
+    items.push(
+      { icon: Building2, label: "Organizations" },
+      { icon: FileText, label: "Notes" },
+      { icon: Activity, label: "Activity" },
+      { icon: CreditCard, label: "Billing" },
+    );
+    return items;
+  }, [hostingEnabled, vpsProductEnabled]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-background shadow-2xl shadow-primary/10">

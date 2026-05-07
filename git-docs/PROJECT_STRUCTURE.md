@@ -849,8 +849,6 @@ skypanelv2/
 ├── .gitignore
 ├── .npmrc
 ├── .nvmrc                                  # Node.js version (22.22.0)
-├── .replit
-├── .replitignore
 ├── .release
 ├── .vercelignore
 ├── .emdash.json
@@ -862,7 +860,6 @@ skypanelv2/
 ├── egress-readme.md
 ├── IP-WALL-OF-SHAME.md
 ├── new_component.tsx
-├── replit.md
 ├── skills-lock.json
 ├── test-phpini.ts
 ├── index.html                              # Vite HTML entry point

@@ -1,4 +1,6 @@
 ---
+name: skypanel-api-routes
+description: API route guidelines for skypanelv2 Express backend. Applies to all files in api/routes/** including admin routes and hosting sub-routes.
 applyTo: "api/routes/**"
 ---
 
@@ -53,7 +55,7 @@ import { logActivity } from '../services/activityLogger.js';
 await logActivity(userId, organizationId, 'vps.created', `Created VPS ${label}`, { vpsId });
 ```
 
-Common action types: `vps.created`, `vps.deleted`, `vps.rebuilt`, `vps.power_on`, `vps.power_off`, `ssh.session_started`, `billing.credited`.
+Common action types: `vps.created`, `vps.deleted`, `vps.rebuilt`, `vps.power_on`, `vps.power_off`, `ssh.session_started`, `billing.credited`, `support.ticket_created`, `support.ticket_replied`, `blog.post_created`, `blog.post_updated`.
 
 ## Organization Isolation
 
@@ -65,3 +67,11 @@ await query('SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2'
 // ❌
 await query('SELECT * FROM vps_instances WHERE id = $1', [id]);
 ```
+
+## Global API Middleware
+
+The `/api` path in `api/app.ts` gets these middleware applied globally:
+- CSRF protection
+- API-key authentication
+- Smart rate limits
+- Rate-limit response headers

@@ -704,6 +704,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/linode/status",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/linode/status",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/networking/firewall-settings",
     "protected": true,
     "admin": true

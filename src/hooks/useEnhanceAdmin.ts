@@ -1,6 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 
+export const linodeAdminKeys = {
+  all: ["linode-admin"] as const,
+  status: () => ["linode-admin", "status"] as const,
+};
+
+export function useLinodeAdminStatus() {
+  return useQuery({
+    queryKey: linodeAdminKeys.status(),
+    queryFn: async () => {
+      const res = await apiClient.get("/admin/linode/status");
+      return res as {
+        hardEnabled: boolean;
+        envConfigured: boolean;
+        missingEnv: string[];
+        runtimeEnabled: boolean;
+        effectiveEnabled: boolean;
+      };
+    },
+  });
+}
+
 export const enhanceAdminKeys = {
   all: ["enhance-admin"] as const,
   status: () => ["enhance-admin", "status"] as const,

@@ -1,6 +1,6 @@
 import express from "express";
 import { authenticateToken, requireOrganization } from "../../middleware/auth.js";
-import { config } from "../../config/index.js";
+import { requireVpsEnabledForUsers } from "../../middleware/vpsHosting.js";
 
 import providersRouter from "./providers.js";
 import plansRouter from "./plans.js";
@@ -14,7 +14,7 @@ import instancesRouter from "./instances.js";
 
 const router = express.Router();
 
-router.use(authenticateToken, requireOrganization);
+router.use(authenticateToken, requireOrganization, requireVpsEnabledForUsers);
 
 router.use("/", providersRouter);
 router.use("/", plansRouter);

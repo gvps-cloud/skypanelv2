@@ -1,4 +1,6 @@
 ---
+name: skypanel-testing
+description: Testing guidelines for skypanelv2. Applies to tests/**, src/**/*.test.*, and api/**/*.test.* files.
 applyTo: "tests/**,src/**/*.test.*,api/**/*.test.*"
 ---
 
@@ -28,6 +30,8 @@ There is **no** `npm test` script — always run `npx vitest run` directly.
 - `globals: true` — no need to import `describe`, `it`, `expect`
 - `environment: jsdom` — DOM APIs available in all tests
 - `@` alias resolves to `./src`
+- `testTimeout: 15000` — 15 second timeout per test
+- `fileParallelism: false` — avoids DB/rate-limiter state interference
 - `VITE_API_URL` is set to `http://localhost:3001/api` in test env
 
 ## Security Tests Pattern
@@ -57,3 +61,22 @@ vi.mock('../lib/database.js', () => ({ query: vi.fn(), transaction: vi.fn() }));
 ## Frontend Component Tests
 
 Use React Testing Library with `test-utils.tsx` helpers from `src/test-utils.tsx`. Wrap components with `renderWithProviders()` if they need auth/query context.
+
+## Playwright E2E
+
+Playwright e2e config auto-starts `npm run dev-up` outside CI; base URL defaults to `http://localhost:5173`.
+
+```bash
+npx playwright test        # Run all e2e tests
+npx playwright test --ui   # Run with Playwright UI
+```
+
+## Test Include Globs
+
+Vitest includes these patterns:
+- `src/**/*.{test,spec}.*`
+- `tests/security/**/*`
+- `tests/integration/**/*`
+- `api/**/*.test.ts`
+
+`tests/e2e/**` is excluded from Vitest.

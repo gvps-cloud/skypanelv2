@@ -1,4 +1,6 @@
 ---
+name: skypanel-migrations
+description: Database migration guidelines for skypanelv2. Applies to all files in migrations/** directory.
 applyTo: "migrations/**"
 ---
 
@@ -26,3 +28,11 @@ See [AGENTS.md](../../AGENTS.md) for full context.
 - Soft deletes: add `deleted_at TIMESTAMPTZ` column rather than hard-deleting rows where audit history matters.
 - JSONB for flexible config/metadata: prefer `JSONB DEFAULT '{}'` over varchar JSON strings.
 - Foreign keys: always add `ON DELETE CASCADE` or `ON DELETE SET NULL` explicitly.
+
+## Checksum Validation
+
+The migration runner validates SHA256 checksums. If a previously-applied migration has a changed checksum, it logs a warning and skips that file (does not error out).
+
+## Drizzle Sync (Development Only)
+
+Use `pnpm push` / `pnpm push-force` to sync Drizzle schema to DB in development only. Do not use in production.

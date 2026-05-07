@@ -1,0 +1,29 @@
+# Checklist
+
+- [x] `skypanel-rules.md` contains all lib/ details (Orval warning, pnpm codegen, pnpm push/push-force, git-docs/)
+- [x] `skypanel-rules.md` contains all commands (db:fresh, docs:api:audit, test:watch, test:coverage, Playwright e2e)
+- [x] `skypanel-rules.md` contains all env vars (STARTUP_SIDE_EFFECTS_ENABLED, DEFAULT_ADMIN_EMAIL/PASSWORD)
+- [x] `skypanel-rules.md` contains all route guards (HostingMarketingGate, RegistrationEnabledRoute)
+- [x] `skypanel-rules.md` contains all architecture hotspots (egress billing, fraud screening, refund processing, Vite proxy SSE/WS, blog routes, support tickets, platform maintenance)
+- [x] `skypanel-rules.md` contains all backend detail (CSRF/API-key auth/rate limits on /api, config validation cron)
+- [x] `skypanel-rules.md` contains all activity types (support.ticket_created, support.ticket_replied, blog.post_created, blog.post_updated)
+- [x] `skypanel-rules.md` contains key feature areas list
+- [x] `always-applied.md` contains git-docs/ convention
+- [x] `always-applied.md` contains STARTUP_SIDE_EFFECTS_ENABLED detail
+- [x] `always-applied.md` contains config validation and metrics/billing cron detail
+- [x] `backend.md` contains CSRF, API-key auth, smart rate limits on /api
+- [x] `backend.md` contains all activity types including support and blog types
+- [x] `backend.md` contains egress billing, fraud screening, refund processing services
+- [x] `backend.md` contains STARTUP_SIDE_EFFECTS_ENABLED config validation detail
+- [x] `frontend.md` contains HostingMarketingGate and RegistrationEnabledRoute guards
+- [x] `frontend.md` contains Vite proxy SSE/WebSocket handling detail
+- [x] `frontend.md` contains removeMockData plugin detail
+- [x] `database.md` contains pnpm push/push-force Drizzle detail
+- [x] `database.md` contains SHA256 checksum validation detail
+- [x] `testing.md` contains Playwright e2e config detail
+- [x] `testing.md` contains testTimeout and fileParallelism details
+- [x] `testing.md` contains complete test include globs
+- [x] `.github/instructions/api-routes.instructions.md` updated with missing activity types and CSRF/rate limit detail
+- [x] `.github/instructions/frontend.instructions.md` updated with missing guards and Vite proxy detail
+- [x] `.github/instructions/migrations.instructions.md` updated with checksum and pnpm push details
+- [x] `.github/instructions/tests.instructions.md` updated with Playwright, testTimeout, fileParallelism, globs

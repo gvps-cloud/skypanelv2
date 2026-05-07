@@ -42,6 +42,7 @@ import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { CategoryManager } from "@/components/admin/CategoryManager";
 import { EnhanceIntegrationCard } from "@/components/admin/EnhanceIntegrationCard";
+import { FeatureTogglesPanel } from "@/components/admin/FeatureTogglesPanel";
 import { EnhancePlans } from "@/components/admin/EnhancePlans";
 import { UserHostingList } from "@/components/admin/UserHostingList";
 import { FraudCheckList } from "@/components/admin/FraudCheckList";
@@ -230,6 +231,7 @@ type AdminSection =
   | "billing"
   | "email-templates"
   | "activity-log"
+  | "feature-toggles"
   | "enhance-hosting"
   | "enhance-plans"
   | "enhance-subscriptions"
@@ -272,6 +274,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "billing",
   "email-templates",
   "activity-log",
+  "feature-toggles",
   "enhance-hosting",
   "enhance-plans",
   "enhance-subscriptions",
@@ -307,6 +310,7 @@ const ADMIN_SECTION_COMMANDS: Record<AdminSection, string> = {
   billing: "billing --ledger",
   "email-templates": "comms --templates",
   "activity-log": "audit --tail",
+  "feature-toggles": "ops --features",
   "enhance-hosting": "hosting --enhance",
   "enhance-plans": "hosting --plans",
   "enhance-subscriptions": "hosting --subs",
@@ -2278,7 +2282,10 @@ const Admin: React.FC = () => {
     { title: "Billing", ids: ["billing", "egress-credits"] },
     { title: "Users & Organizations", ids: ["user-management", "organizations"] },
     { title: "Brand & Communications", ids: ["announcements", "email-templates"] },
-    { title: "Platform & Audit", ids: ["platform", "rate-limiting", "activity-log", "fraud-protection", "maintenance"] },
+    {
+      title: "Platform & Audit",
+      ids: ["platform", "feature-toggles", "rate-limiting", "activity-log", "fraud-protection", "maintenance"],
+    },
   ];
 
   return (
@@ -3583,6 +3590,10 @@ const Admin: React.FC = () => {
           </div>
         </SectionPanel>
 
+        <SectionPanel section="feature-toggles" activeSection={activeTab}>
+          <FeatureTogglesPanel />
+        </SectionPanel>
+
         <SectionPanel section="contact-management" activeSection={activeTab}>
           <AdminContactManagementSection token={token || ""} />
         </SectionPanel>
@@ -3681,7 +3692,7 @@ const Admin: React.FC = () => {
         </SectionPanel>
 
         <SectionPanel section="maintenance" activeSection={activeTab}>
-          <TerminalPanel title="MAINTENANCE" tone="alert" traffic bodyClassName="p-0">
+          <TerminalPanel title="MAINTENANCE" tone="default" traffic bodyClassName="p-0">
             <div className="space-y-6 p-5 sm:p-6">
               <div>
                 <h2 className="text-xl font-semibold">Maintenance & Access Control</h2>

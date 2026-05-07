@@ -4,28 +4,12 @@ import { apiClient } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Loader2, Globe, RefreshCw, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Globe, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export function EnhanceIntegrationCard() {
   const { data: status, isLoading, refetch } = useEnhanceAdminStatus();
-  const [toggling, setToggling] = useState(false);
   const [testing, setTesting] = useState(false);
-
-  const handleToggle = async (enabled: boolean) => {
-    setToggling(true);
-    try {
-      await apiClient.patch("/admin/enhance/status", { enabled });
-      toast.success(`Enhance ${enabled ? "enabled" : "disabled"}`);
-      refetch();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to toggle Enhance");
-    } finally {
-      setToggling(false);
-    }
-  };
 
   const handleTest = async () => {
     setTesting(true);
@@ -53,8 +37,6 @@ export function EnhanceIntegrationCard() {
       </Card>
     );
   }
-
-  const canToggle = status?.hardEnabled && status?.envConfigured;
 
   return (
     <Card className="border-primary/25">
@@ -115,19 +97,12 @@ export function EnhanceIntegrationCard() {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="enhance-toggle"
-              checked={status?.runtimeEnabled || false}
-              onCheckedChange={handleToggle}
-              disabled={!canToggle || toggling}
-            />
-            <Label htmlFor="enhance-toggle">
-              {toggling ? <Loader2 className="w-4 h-4 animate-spin" /> : "Runtime Enabled"}
-            </Label>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleTest} disabled={testing}>
+        <div className="flex flex-col gap-2 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Runtime enable/disable is managed under{" "}
+            <span className="font-medium text-foreground">Admin → Platform &amp; Audit → Feature toggles</span>.
+          </p>
+          <Button variant="outline" size="sm" onClick={handleTest} disabled={testing} className="shrink-0">
             {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
             Test Connection
           </Button>

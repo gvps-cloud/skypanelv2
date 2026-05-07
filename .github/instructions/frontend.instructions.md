@@ -1,4 +1,6 @@
 ---
+name: skypanel-frontend
+description: Frontend guidelines for skypanelv2 React application. Applies to all files in src/** including components, pages, and utilities.
 applyTo: "src/**"
 ---
 
@@ -42,6 +44,10 @@ For both patterns, throw on `!response.ok`. Prefer `err.error || \`HTTP ${respon
 - Authenticated pages → `<ProtectedRoute>` (renders `AppLayout` with sidebar).
 - Admin pages → `<AdminRoute>` (requires `user.role === 'admin'`).
 - SSH console → `<StandaloneProtectedRoute>` (auth without sidebar).
+- Hosting pages → `<HostingEnabledRoute>` (gated by feature flag).
+- Hosting marketing → `<HostingMarketingGate>` (redirects to `/` if hosting disabled).
+- Registration pages → `<RegistrationEnabledRoute>` (redirects to `/login` if registration disabled).
+- Maintenance mode → `<MaintenanceGuard>` (redirects non-admins to `/maintenance`).
 
 ## Theming
 
@@ -53,3 +59,11 @@ For both patterns, throw on `!response.ok`. Prefer `err.error || \`HTTP ${respon
 - Shared design system: `@/styles/home.css` classes (`.home-feature-card`, `.home-glass-panel`, etc.).
 - Layout: `MarketingNavbar` + main + `MarketingFooter`.
 - Navbar is `fixed top-0 z-40` ~72 px tall — content areas need `pt-[72px]`.
+
+## Vite Proxy
+
+Vite proxy config in `vite.config.ts` includes SSE/WebSocket handling for `/notifications/stream`. Frontend API paths default to `/api`; Vite proxies `/api/` to `localhost:3001` in dev.
+
+## Production Build
+
+Vite build includes a `removeMockData` plugin that strips example emails, passwords, and API tokens from production bundles. Do not add sensitive-looking defaults to `src/` files expecting them to ship.

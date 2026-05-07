@@ -25,7 +25,7 @@ import { MatrixRain } from "@/components/fx/MatrixRain";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 import { BRAND_NAME } from "@/lib/brand";
 import { ImpersonationSidebarPanel } from "@/components/ImpersonationSidebarPanel";
 import { NavMain } from "@/components/nav-main";
@@ -60,6 +60,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const { state, isMobile } = useSidebar();
   const { isImpersonating, impersonatedUser, exitImpersonation, isExiting } = useImpersonation();
   const { data: hostingStatus } = useHostingStatus();
+  const { data: vpsProductStatus } = useVpsProductStatus();
 
   // Organization switcher state
   const [accessibleOrgs, setAccessibleOrgs] = React.useState<
@@ -244,9 +245,21 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             title: "Platform & Audit",
             icon: ShieldCheck,
             url: `/admin#platform`,
-            isActive: ["platform", "rate-limiting", "activity-log", "fraud-protection", "maintenance"].includes(activeAnchor),
+            isActive: [
+              "platform",
+              "feature-toggles",
+              "rate-limiting",
+              "activity-log",
+              "fraud-protection",
+              "maintenance",
+            ].includes(activeAnchor),
             items: [
               { title: "Platform Controls", url: `/admin#platform`, isActive: activeAnchor === "platform" },
+              {
+                title: "Feature Toggles",
+                url: `/admin#feature-toggles`,
+                isActive: activeAnchor === "feature-toggles",
+              },
               { title: "Rate Limiting", url: `/admin#rate-limiting`, isActive: activeAnchor === "rate-limiting" },
               { title: "Activity Log", url: `/admin#activity-log`, isActive: activeAnchor === "activity-log" },
               { title: "Fraud Protection", url: `/admin#fraud-protection`, isActive: activeAnchor === "fraud-protection" },
@@ -280,12 +293,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           icon: LayoutDashboard,
           isActive: isDashboardActive,
         },
-        {
-          title: "Organizations",
-          url: "/organizations",
-          icon: Building2,
-          isActive: pathname.startsWith("/organizations"),
-        },
         ...(hostingStatus?.enabled
           ? [
               {
@@ -296,29 +303,56 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               },
             ]
           : []),
+        ...(vpsProductStatus?.enabled
+          ? [
+              {
+                title: "Compute",
+                url: "/vps",
+                icon: Server,
+                isActive: isVpsActive,
+                items: [
+                  {
+                    title: "VPS",
+                    url: "/vps",
+                    isActive: isVpsActive,
+                  },
+                  {
+                    title: "SSH Keys",
+                    url: "/ssh-keys",
+                    isActive: isSshKeysActive,
+                  },
+                ],
+              },
+            ]
+          : [
+              {
+                title: "Organizations",
+                url: "/organizations",
+                icon: Building2,
+                isActive: pathname.startsWith("/organizations"),
+              },
+            ]),
+        {
+          title: "SSH Keys",
+          url: "/ssh-keys",
+          icon: Wrench,
+          isActive: isSshKeysActive,
+        },
+        ...(vpsProductStatus?.enabled
+          ? [
+              {
+                title: "Organizations",
+                url: "/organizations",
+                icon: Building2,
+                isActive: pathname.startsWith("/organizations"),
+              },
+            ]
+          : []),
         {
           title: "Activity",
           url: "/activity",
           icon: Activity,
           isActive: isActivityActive,
-        },
-        {
-          title: "Compute",
-          url: "/vps",
-          icon: Server,
-          isActive: isVpsActive,
-          items: [
-            {
-              title: "VPS",
-              url: "/vps",
-              isActive: isVpsActive,
-            },
-            {
-              title: "SSH Keys",
-              url: "/ssh-keys",
-              isActive: isSshKeysActive,
-            },
-          ],
         },
         {
           title: "Billing",
@@ -358,6 +392,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       pathname,
       currentHash,
       hostingStatus?.enabled,
+      vpsProductStatus?.enabled,
       isActivityActive,
       isAdminRoute,
       isBillingActive,

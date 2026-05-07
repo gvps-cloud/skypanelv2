@@ -3,7 +3,7 @@
  * Handles pre-paid egress credits for hourly billing enforcement
  */
 
-import express, { Request, Response } from "express";
+import express, { Request, Response, type NextFunction } from "express";
 import {
   body,
   param,
@@ -11,6 +11,7 @@ import {
 } from "express-validator";
 import { PayPalService } from "../services/paypalService.js";
 import { authenticateToken, requireOrganization, requireAdmin } from "../middleware/auth.js";
+import { requireVpsEnabledForUsers } from "../middleware/vpsHosting.js";
 import {
   getEgressCreditBalanceDetails,
   getEgressCreditPurchaseHistory,
@@ -67,6 +68,12 @@ const parsePackSettingsValue = (value: unknown): unknown[] => {
 
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
+router.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith("/admin")) {
+    return next();
+  }
+  return requireVpsEnabledForUsers(req, res, next);
+});
 
 /**
  * GET /api/egress/credits

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 
 export interface SiteStatus {
@@ -22,8 +22,9 @@ export function useSiteStatus() {
         maintenanceMessageHtml: data.maintenanceMessageHtml,
       };
     },
-    staleTime: 30_000,
+    staleTime: 60_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
 }

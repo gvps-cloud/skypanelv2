@@ -219,15 +219,16 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                     onOpenChange={(nextOpen) => handleGroupToggle(itemKey, nextOpen)}
                   >
                     <>
-                      <CollapsibleTrigger asChild>
-                        <SidebarMenuButton
-                          tooltip={item.title}
-                          isActive={isExactActive}
-                          className={cn(
-                            hasActiveChild && !isExactActive ? "bg-sidebar-accent/50 text-sidebar-accent-foreground" : "",
-                            isExactActive && "shadow-[inset_2px_0_0_hsl(var(--primary))]",
-                          )}
-                        >
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.title}
+                        isActive={isExactActive}
+                        className={cn(
+                          hasActiveChild && !isExactActive ? "bg-sidebar-accent/50 text-sidebar-accent-foreground" : "",
+                          isExactActive && "shadow-[inset_2px_0_0_hsl(var(--primary))]",
+                        )}
+                      >
+                        <Link to={item.url}>
                           <span
                             className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none group-data-[collapsible=icon]:hidden"
                             aria-hidden="true"
@@ -236,8 +237,8 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                           </span>
                           <item.icon />
                           <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
-                        </SidebarMenuButton>
-                      </CollapsibleTrigger>
+                        </Link>
+                      </SidebarMenuButton>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuAction className="data-[state=open]:rotate-90">
                           <ChevronRight />

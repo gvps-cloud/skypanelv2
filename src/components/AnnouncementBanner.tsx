@@ -14,6 +14,7 @@ interface Announcement {
 }
 
 const STORAGE_KEY = "skypanelv2:dismissed-announcements";
+const CACHE_KEY = "skypanelv2:cached-announcements";
 
 const TYPE_STYLES: Record<string, string> = {
   info: "bg-blue-600/90 dark:bg-blue-700/90 text-white border-blue-700 dark:border-blue-800 backdrop-blur-md",
@@ -47,6 +48,24 @@ function addDismissedId(id: string) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([...dismissed]));
 }
 
+function getCachedAnnouncements(): Announcement[] {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as Announcement[];
+  } catch {
+    return [];
+  }
+}
+
+function setCachedAnnouncements(announcements: Announcement[]) {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(announcements));
+  } catch {
+    // sessionStorage may be unavailable in private browsing
+  }
+}
+
 interface AnnouncementBannerProps {
   topOffset?: number;
 }
@@ -54,7 +73,14 @@ interface AnnouncementBannerProps {
 export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
   topOffset = 0,
 }) => {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(() => {
+    const cached = getCachedAnnouncements();
+    if (cached.length > 0) {
+      const dismissed = getDismissedIds();
+      return cached.filter((a) => !dismissed.has(a.id));
+    }
+    return [];
+  });
   const containerRef = useRef<HTMLDivElement>(null);
 
   const fetchAnnouncements = useCallback(async () => {
@@ -62,11 +88,11 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
       const data = await apiClient.get<{ announcements: Announcement[] }>("/announcements");
       if (data.announcements) {
         const dismissed = getDismissedIds();
-        setAnnouncements(
-          (data.announcements as Announcement[]).filter(
-            (a) => !dismissed.has(a.id)
-          )
+        const filtered = (data.announcements as Announcement[]).filter(
+          (a) => !dismissed.has(a.id)
         );
+        setAnnouncements(filtered);
+        setCachedAnnouncements(filtered);
       }
     } catch {
       // Silently fail — announcements are non-critical
@@ -122,7 +148,11 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
   const handleDismiss = (id: string, isDismissable: boolean) => {
     if (!isDismissable) return;
     addDismissedId(id);
-    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+    setAnnouncements((prev) => {
+      const updated = prev.filter((a) => a.id !== id);
+      setCachedAnnouncements(updated);
+      return updated;
+    });
   };
 
   return (

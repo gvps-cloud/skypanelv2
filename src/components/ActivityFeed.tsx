@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Bell,
@@ -216,6 +216,7 @@ const ActivityFeed: React.FC = () => {
     enabled: !!user,
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
 
   const { data: unreadCountData } = useQuery({
@@ -227,6 +228,7 @@ const ActivityFeed: React.FC = () => {
     enabled: !!user,
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
 
   const markAsReadMutation = useMutation({

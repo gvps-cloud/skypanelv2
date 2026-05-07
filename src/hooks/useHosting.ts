@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 
 export interface HostingPlanFeatures {
@@ -70,6 +70,23 @@ export interface HostingBillingSummary {
   refunds: HostingBillingRefund[];
 }
 
+export const vpsProductKeys = {
+  all: ["vps-product"] as const,
+  status: () => ["vps-product", "status"] as const,
+};
+
+export function useVpsProductStatus() {
+  return useQuery({
+    queryKey: vpsProductKeys.status(),
+    queryFn: async () => {
+      const res = await apiClient.get("/vps/status");
+      return res as { enabled: boolean };
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export const hostingKeys = {
   all: ["hosting"] as const,
   status: () => ["hosting", "status"] as const,
@@ -89,6 +106,8 @@ export function useHostingStatus() {
       const res = await apiClient.get("/hosting/status");
       return res as { enabled: boolean };
     },
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

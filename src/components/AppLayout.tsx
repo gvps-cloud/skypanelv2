@@ -74,7 +74,7 @@ import FooterPartnerLinks from "@/components/FooterPartnerLinks";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 import { apiClient } from "@/lib/api";
 import {
   BreadcrumbProvider,
@@ -260,6 +260,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { user, isImpersonating } = useAuth();
   const { data: hostingStatus } = useHostingStatus();
+  const { data: vpsProductStatus } = useVpsProductStatus();
   const [commandOpen, setCommandOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -317,6 +318,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   // Fetch VPS instances
   const fetchVPSInstances = useCallback(async () => {
+    if (!vpsProductStatus?.enabled) {
+      setVpsInstances([]);
+      setVpsLoading(false);
+      return;
+    }
     setVpsLoading(true);
     try {
       const payload = await apiClient.get<{ instances: any[]; error?: string }>("/vps");
@@ -360,7 +366,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     } finally {
       setVpsLoading(false);
     }
-  }, []);
+  }, [vpsProductStatus?.enabled]);
 
   const fetchSupportTickets = useCallback(async () => {
     if (!isAdmin) {
@@ -494,15 +500,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         requiresShift: false,
         requiresAlt: true,
       },
-      {
-        icon: Server,
-        label: "VPS Instances",
-        href: "/vps",
-        shortcut: isMac ? "⌥V" : "Alt+V",
-        shortcutKey: "v",
-        requiresShift: false,
-        requiresAlt: true,
-      },
+      ...(vpsProductStatus?.enabled
+        ? [
+            {
+              icon: Server,
+              label: "VPS Instances",
+              href: "/vps",
+              shortcut: isMac ? "⌥V" : "Alt+V",
+              shortcutKey: "v",
+              requiresShift: false,
+              requiresAlt: true,
+            },
+          ]
+        : []),
       {
         icon: Building2,
         label: "Organizations",
@@ -616,7 +626,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         requiresAlt: true,
       },
     ],
-    [hostingStatus?.enabled, isMac],
+    [hostingStatus?.enabled, vpsProductStatus?.enabled, isMac],
   );
 
   const adminNavigationItems = useMemo<CommandNavigationItem[]>(
@@ -917,12 +927,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const quickCreateItems = useMemo<QuickCreateItem[]>(() => {
     const items: QuickCreateItem[] = [
-      {
-        label: "Launch VPS",
-        description: "Deploy a new virtual server",
-        href: "/vps?create=1",
-        icon: Server,
-      },
+      ...(vpsProductStatus?.enabled
+        ? [
+            {
+              label: "Launch VPS",
+              description: "Deploy a new virtual server",
+              href: "/vps?create=1",
+              icon: Server,
+            },
+          ]
+        : []),
       ...(hostingStatus?.enabled
         ? [
             {
@@ -948,7 +962,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     ];
 
     return items;
-  }, [hostingStatus?.enabled]);
+  }, [hostingStatus?.enabled, vpsProductStatus?.enabled]);
 
   const handleNavigate = useCallback(
     (href: string) => {
@@ -1239,7 +1253,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </CommandGroup>
 
             {/* VPS Instances Group */}
-            {(vpsInstances.length > 0 || vpsLoading) && (
+            {vpsProductStatus?.enabled && (vpsInstances.length > 0 || vpsLoading) && (
               <>
                 <CommandSeparator />
                 <CommandGroup heading="# vps">

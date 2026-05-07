@@ -3,7 +3,7 @@
  * Presents a refreshed command center view for VPS, billing, and activity.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Server,
   Wallet,
@@ -28,7 +28,7 @@ import { getMonthlySpendWithFallback } from "../lib/billingUtils";
 import { MonthlyResetIndicator } from "@/components/Dashboard/MonthlyResetIndicator";
 import { formatBillingAmount } from "@/lib/formatters";
 import { apiClient } from "@/lib/api";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 import { MatrixRain } from "@/components/fx/MatrixRain";
 import { StatusHeartbeat } from "@/components/fx/StatusHeartbeat";
 import { TerminalPageHeader, TerminalPanel } from "@/components/terminal";
@@ -225,6 +225,23 @@ const Dashboard: React.FC = () => {
   const [billing, setBilling] = useState<BillingStats | null>(null);
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
+  const hostingEnabledRef = useRef(hostingEnabled);
+  const vpsEnabledRef = useRef(vpsEnabled);
+
+  useEffect(() => {
+    if (hostingEnabled !== hostingEnabledRef.current) {
+      hostingEnabledRef.current = hostingEnabled;
+    }
+  }, [hostingEnabled]);
+
+  useEffect(() => {
+    if (vpsEnabled !== vpsEnabledRef.current) {
+      vpsEnabledRef.current = vpsEnabled;
+    }
+  }, [vpsEnabled]);
+
   const [hostingServices, setHostingServices] = useState<HostingServiceSummary[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -236,29 +253,23 @@ const Dashboard: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const basePromises: Promise<any>[] = [
-        apiClient.get<VpsListResponse>("/vps"),
-        apiClient.get<WalletBalanceResponse>("/payments/wallet/balance"),
-        apiClient.get<PaymentsHistoryResponse>("/payments/history?limit=1&status=completed"),
-      ];
-
-      if (hostingEnabled) {
-        basePromises.push(
-          apiClient.get<WalletBalanceResponse>("/payments/wallet/hosting/balance").catch(() => ({ balance: 0 }))
-        );
+      if (vpsEnabledRef.current) {
+        const vpsData = await apiClient.get<VpsListResponse>("/vps");
+        const instances: VPSStats[] = await Promise.all((vpsData.instances ?? []).map(mapVpsInstance));
+        setVpsInstances(instances);
+      } else {
+        setVpsInstances([]);
       }
 
-      const results = await Promise.all(basePromises);
-      const vpsData = results[0] as VpsListResponse;
-      const walletData = results[1] as WalletBalanceResponse;
-      const paymentsData = results[2] as PaymentsHistoryResponse;
-      const hostingWalletData = hostingEnabled
-        ? (results[3] as WalletBalanceResponse)
+      const walletData = await apiClient.get<WalletBalanceResponse>("/payments/wallet/balance");
+      const paymentsData = await apiClient.get<PaymentsHistoryResponse>(
+        "/payments/history?limit=1&status=completed",
+      );
+      const hostingWalletData = hostingEnabledRef.current
+        ? await apiClient
+            .get<WalletBalanceResponse>("/payments/wallet/hosting/balance")
+            .catch(() => ({ balance: 0 }))
         : { balance: 0 };
-
-      const instances: VPSStats[] = await Promise.all((vpsData.instances ?? []).map(mapVpsInstance));
-
-      setVpsInstances(instances);
 
       const lastPaymentItem = (paymentsData.payments ?? [])[0];
       const monthlySpend = await getMonthlySpendWithFallback();
@@ -273,7 +284,7 @@ const Dashboard: React.FC = () => {
         },
       });
 
-      if (hostingEnabled) {
+      if (hostingEnabledRef.current) {
         try {
           const hostingData = await apiClient.get<HostingServicesResponse>("/hosting/services");
           const services = hostingData.services ?? [];
@@ -300,11 +311,17 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, hostingEnabled]);
+  }, [token]);
 
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  useEffect(() => {
+    if (!vpsEnabled && hostingEnabled && activeDashboardTab === "vps") {
+      setActiveDashboardTab("hosting");
+    }
+  }, [vpsEnabled, hostingEnabled, activeDashboardTab]);
 
   const quickActions = useMemo(() => {
     const actions = [
@@ -320,6 +337,7 @@ const Dashboard: React.FC = () => {
         description: "Deploy a fresh instance in under a minute.",
         to: "/vps",
         icon: <Plus className="h-4 w-4" />,
+        hidden: !vpsEnabled,
       },
       {
         title: "Top up wallet",
@@ -336,7 +354,7 @@ const Dashboard: React.FC = () => {
     ];
 
     return actions.filter((action) => !action.hidden);
-  }, [hostingEnabled]);
+  }, [hostingEnabled, vpsEnabled]);
 
   const heroStats = useMemo(() => {
     if (!vpsInstances.length) {
@@ -487,13 +505,15 @@ const Dashboard: React.FC = () => {
             >
               &gt;
             </span>
-            <Badge
-              variant="outline"
-              className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
-            >
-              <div className="h-1.5 w-1.5 shrink-0 bg-primary" aria-hidden="true" />
-              {heroStats.running} vps active
-            </Badge>
+            {vpsEnabled && (
+              <Badge
+                variant="outline"
+                className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
+              >
+                <div className="h-1.5 w-1.5 shrink-0 bg-primary" aria-hidden="true" />
+                {heroStats.running} vps active
+              </Badge>
+            )}
             {hostingEnabled && (
               <Badge
                 variant="outline"
@@ -503,7 +523,7 @@ const Dashboard: React.FC = () => {
                 {activeHostingServices} hosting active
               </Badge>
             )}
-            {heroStats.flagged > 0 && (
+            {vpsEnabled && heroStats.flagged > 0 && (
               <Badge
                 variant="secondary"
                 className="gap-2 rounded-sm px-2.5 py-1 text-xs shadow-none"
@@ -512,7 +532,7 @@ const Dashboard: React.FC = () => {
                 {heroStats.flagged} attention
               </Badge>
             )}
-            {heroStats.averageCpu !== null && (
+            {vpsEnabled && heroStats.averageCpu !== null && (
               <Badge
                 variant="outline"
                 className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
@@ -577,22 +597,24 @@ const Dashboard: React.FC = () => {
 
         {hostingEnabled ? (
           <Tabs
-            value={activeDashboardTab}
+            value={vpsEnabled ? activeDashboardTab : "hosting"}
             onValueChange={(v) => setActiveDashboardTab(v as "vps" | "hosting")}
             className="space-y-6"
           >
             <div className="flex items-center justify-between gap-4">
               <TabsList className="inline-flex h-10 gap-0 rounded-sm border border-border bg-muted/30 p-0 shadow-none">
-                <TabsTrigger
-                  value="vps"
-                  className="rounded-none border-r border-border px-5 py-2 text-xs font-semibold uppercase tracking-wide last:border-r-0 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent"
-                >
-                  <Server className="mr-2 h-4 w-4" />
-                  VPS
-                </TabsTrigger>
+                {vpsEnabled && (
+                  <TabsTrigger
+                    value="vps"
+                    className="rounded-none border-r border-border px-5 py-2 text-xs font-semibold uppercase tracking-wide last:border-r-0 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent"
+                  >
+                    <Server className="mr-2 h-4 w-4" />
+                    VPS
+                  </TabsTrigger>
+                )}
                 <TabsTrigger
                   value="hosting"
-                  className="rounded-none px-5 py-2 text-xs font-semibold uppercase tracking-wide data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent"
+                  className="rounded-none border-r border-border px-5 py-2 text-xs font-semibold uppercase tracking-wide last:border-r-0 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent"
                 >
                   <Globe className="mr-2 h-4 w-4" />
                   Hosting
@@ -600,6 +622,7 @@ const Dashboard: React.FC = () => {
               </TabsList>
             </div>
 
+            {vpsEnabled && (
             <TabsContent value="vps" className="mt-0">
               <TerminalPanel title="VPS FLEET" bodyClassName="p-4 md:p-6">
                 <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -770,6 +793,7 @@ const Dashboard: React.FC = () => {
                   </div>
               </TerminalPanel>
             </TabsContent>
+            )}
 
             <TabsContent value="hosting" className="mt-0">
               <TerminalPanel title="WEB HOSTING" bodyClassName="p-4 md:p-6">
@@ -879,7 +903,7 @@ const Dashboard: React.FC = () => {
               </TerminalPanel>
             </TabsContent>
           </Tabs>
-        ) : (
+        ) : vpsEnabled ? (
           <TerminalPanel title="VPS FLEET" bodyClassName="p-4 md:p-6">
             <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
               <p className="text-xs text-muted-foreground">
@@ -1046,6 +1070,13 @@ const Dashboard: React.FC = () => {
                 )}
                 </div>
               </div>
+          </TerminalPanel>
+        ) : (
+          <TerminalPanel title="COMPUTE" bodyClassName="p-4 md:p-6">
+            <p className="text-sm text-muted-foreground">
+              VPS hosting is not available on this deployment right now. You can still use billing, support, and other
+              workspace tools.
+            </p>
           </TerminalPanel>
         )}
       </div>

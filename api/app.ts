@@ -73,6 +73,7 @@ import {
   startMetricsPersistence,
 } from "./services/rateLimitMetrics.js";
 import { BillingCronService } from "./services/billingCronService.js";
+import { LinodeToggleService } from "./services/linodeToggle.js";
 import { sendSafeErrorResponse } from "./lib/errorHandling.js";
 import { addNonceToInlineScripts } from "./lib/htmlNonce.js";
 import {
@@ -347,6 +348,15 @@ app.use("/api/site-status", siteStatusRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
+app.get("/api/vps/status", async (_req: Request, res: Response) => {
+  try {
+    const enabled = await LinodeToggleService.isEffectivelyEnabled();
+    res.json({ enabled });
+  } catch (error) {
+    console.error("Failed to get VPS product status:", error);
+    res.status(500).json({ error: "Failed to get VPS status" });
+  }
+});
 app.get("/api/vps/:id/ssh", (_req: Request, res: Response) => {
   res
     .status(426)

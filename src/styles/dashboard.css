@@ -311,12 +311,12 @@ section.cyber-card {
   overflow: hidden;
 }
 
-@keyframes terminal-scanline {
+@keyframes dashboard-terminal-scanline {
   0% {
-    transform: translateY(-100%);
+    background-position-y: 0;
   }
   100% {
-    transform: translateY(100%);
+    background-position-y: 3px;
   }
 }
 
@@ -351,8 +351,8 @@ section.cyber-card {
     hsl(var(--foreground) / 0.04) 2px,
     hsl(var(--foreground) / 0.04) 3px
   );
-  animation: terminal-scanline 30s linear infinite;
-  will-change: transform;
+  animation: dashboard-terminal-scanline 30s linear infinite;
+  will-change: background-position;
 }
 
 @media (prefers-reduced-motion: reduce) {
