@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Terminal as TerminalIcon } from 'lucide-react';
-import { API_BASE_URL, buildApiUrl } from '../../lib/api';
+import { buildSshWebSocketUrl } from './sshTerminalUrl';
 
 const DEFAULT_ROWS = 30;
 const DEFAULT_COLS = 120;
@@ -228,15 +228,7 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
 
     let wsUrl: string;
     try {
-      const httpTarget = buildApiUrl(`/vps/${instanceId}/ssh`, API_BASE_URL);
-      const url = new URL(httpTarget, window.location.origin);
-      // Force secure websocket if window is HTTPS to prevent Mixed Content
-      const isHttps = url.protocol === 'https:' || window.location.protocol === 'https:';
-      url.protocol = isHttps ? 'wss:' : 'ws:';
-      // WebSocket auth via HttpOnly cookie - no token in URL needed
-      url.searchParams.set('rows', String(rows));
-      url.searchParams.set('cols', String(cols));
-      wsUrl = url.toString();
+      wsUrl = buildSshWebSocketUrl(instanceId, rows, cols);
     } catch (err) {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       wsUrl = `${protocol}//${window.location.host}/api/vps/${instanceId}/ssh?rows=${rows}&cols=${cols}`;

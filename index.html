@@ -10,16 +10,7 @@
     <title>__SHELL_PAGE_TITLE__</title>
     <!-- APP_SOCIAL_HEAD -->
     <!-- APP_RUNTIME_HEAD -->
-    <script>
-      // Apply saved theme preference before React loads to prevent flash.
-      // Standard convention: .dark class = dark mode. Default is dark.
-      try {
-        var pref = localStorage.getItem('user-theme-preference');
-        if (pref !== 'light') {
-          document.documentElement.classList.add('dark');
-        }
-      } catch (e) {}
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

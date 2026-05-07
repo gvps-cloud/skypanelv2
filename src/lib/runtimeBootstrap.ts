@@ -1,18 +1,3 @@
-interface AppRuntimeConfig {
-  VITE_RYBBIT_SCRIPT_URL?: string;
-  VITE_TRACKING_SCRIPT_URL?: string;
-  VITE_RYBBIT_SITE_ID?: string;
-  VITE_RYBBIT_API_KEY?: string;
-  VITE_RYBBIT_TRACK_ERRORS?: boolean | string;
-  VITE_RYBBIT_SESSION_REPLAY?: boolean | string;
-}
-
-declare global {
-  interface Window {
-    __APP_RUNTIME_CONFIG__?: AppRuntimeConfig;
-  }
-}
-
 const truthyValues = new Set(["1", "true", "yes", "on"]);
 const falsyValues = new Set(["0", "false", "no", "off"]);
 

@@ -73,6 +73,7 @@ import {
 } from "./services/rateLimitMetrics.js";
 import { BillingCronService } from "./services/billingCronService.js";
 import { sendSafeErrorResponse } from "./lib/errorHandling.js";
+import { addNonceToInlineScripts } from "./lib/htmlNonce.js";
 import {
   resolveSpaSocialMeta,
   resolvePublicOrigin,
@@ -209,6 +210,8 @@ function buildRuntimeHeadMarkup(nonce: string, pageTitle: string): string {
   );
 
   const runtimeConfig = {
+    CLIENT_URL: config.CLIENT_URL,
+    PUBLIC_ORIGIN: config.CLIENT_URL,
     VITE_RYBBIT_SCRIPT_URL: scriptSrc,
     VITE_TRACKING_SCRIPT_URL: readEnvString(
       process.env.VITE_TRACKING_SCRIPT_URL,
@@ -220,12 +223,13 @@ function buildRuntimeHeadMarkup(nonce: string, pageTitle: string): string {
   };
 
   const headParts = [
-    `<script nonce="${nonce}">document.title = ${JSON.stringify(pageTitle)};</script>`,
-    `<script nonce="${nonce}">window.__APP_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};</script>`,
+    `<script>document.title = ${JSON.stringify(pageTitle)};</script>`,
+    `<script>window.__APP_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};</script>`,
   ];
 
   if (scriptSrc && siteId) {
     const attrs = [
+      `nonce="${escapeHtml(nonce)}"`,
       `id="gvps-rybbit-script"`,
       `src="${escapeHtml(scriptSrc)}"`,
       `data-site-id="${escapeHtml(siteId)}"`,
@@ -285,10 +289,7 @@ async function renderClientIndexHtml(
     "<!-- APP_RUNTIME_HEAD -->",
     buildRuntimeHeadMarkup(nonce, seo.title),
   );
-  return html.replace(
-    /(<script(?![^>]*\bsrc=)[^>]*)(>)/g,
-    `$1 nonce="${nonce}"$2`,
-  );
+  return addNonceToInlineScripts(html, nonce);
 }
 
 // Security middleware - use enhanced Helmet configuration with nonce-based CSP
@@ -345,6 +346,15 @@ app.use("/api/site-status", siteStatusRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
+app.get("/api/vps/:id/ssh", (_req: Request, res: Response) => {
+  res
+    .status(426)
+    .set("Upgrade", "websocket")
+    .json({
+      error: "WebSocket upgrade required",
+      message: "Open this endpoint with a WebSocket client.",
+    });
+});
 app.use("/api/vps", vpsRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/activity", activityRoutes);

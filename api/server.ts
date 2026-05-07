@@ -61,7 +61,7 @@ const server = app.listen(PORT, async () => {
 
   if (!startupSideEffectsEnabled) {
     console.log(
-      "Startup side effects disabled; skipping Bunny CDN refresh, DB listeners, and schedulers.",
+      "Startup side effects disabled; skipping Bunny CDN refresh, notification listeners, and schedulers.",
     );
   } else {
     // Initialize Bunny CDN integration
@@ -73,9 +73,6 @@ const server = app.listen(PORT, async () => {
         console.error("Failed to fetch initial Bunny CDN IPs on startup:", err);
       }
     }
-
-    // Initialize websocket SSH bridge on same HTTP server
-    initSSHBridge(server);
 
     notificationService.start().catch((error) => {
       console.error("Failed to start notification service:", error);
@@ -92,6 +89,10 @@ const server = app.listen(PORT, async () => {
     startBillingScheduler();
   }
 });
+
+// Initialize websocket SSH bridge on same HTTP server.
+// This is request-time functionality, not an optional startup side effect.
+initSSHBridge(server);
 
 /**
  * Start the hourly billing scheduler
