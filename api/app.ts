@@ -32,6 +32,7 @@ import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payments.js";
 import adminRoutes from "./routes/admin/index.js";
 import vpsRoutes from "./routes/vps/index.js";
+import sshHttpRoutes from "./routes/sshHttp.js";
 import supportRoutes from "./routes/support.js";
 import activityRoutes from "./routes/activity.js";
 import invoicesRouter from "./routes/invoices.js";
@@ -355,6 +356,7 @@ app.get("/api/vps/:id/ssh", (_req: Request, res: Response) => {
       message: "Open this endpoint with a WebSocket client.",
     });
 });
+app.use("/api/vps", sshHttpRoutes);
 app.use("/api/vps", vpsRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/activity", activityRoutes);

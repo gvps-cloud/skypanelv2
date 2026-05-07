@@ -11,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { Terminal as TerminalIcon } from 'lucide-react';
 import { buildSshWebSocketUrl } from './sshTerminalUrl';
+import { SshHttpTransport } from './sshHttpTransport';
 
 const DEFAULT_ROWS = 30;
+const SSH_TRANSPORT_KEY = 'skypanel_ssh_transport';
 const DEFAULT_COLS = 120;
 const FULLSCREEN_ROWS = 50;
 const FULLSCREEN_COLS = 150;
@@ -98,6 +100,9 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const transportModeRef = useRef<'ws' | 'http'>('ws');
+  const httpTransportRef = useRef<SshHttpTransport | null>(null);
+  const connectHttpRef = useRef<(isReconnect?: boolean) => void>((() => {}));
   const inputDisposableRef = useRef<{ dispose: () => void } | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
@@ -178,18 +183,20 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
         const newCols = term.cols;
         const newRows = term.rows;
         if (newCols && newRows) {
-          if (newCols !== colsRef.current || newRows !== rowsRef.current) {
-            setCols(newCols);
-            setRows(newRows);
-            colsRef.current = newCols;
-            rowsRef.current = newRows;
-            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({
-                type: 'resize',
-                rows: newRows,
-                cols: newCols
-              }));
-            }
+if (newCols !== colsRef.current || newRows !== rowsRef.current) {
+              setCols(newCols);
+              setRows(newRows);
+              colsRef.current = newCols;
+              rowsRef.current = newRows;
+              if (transportModeRef.current === 'http' && httpTransportRef.current) {
+                httpTransportRef.current.resize(newRows, newCols);
+              } else if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({
+                  type: 'resize',
+                  rows: newRows,
+                  cols: newCols
+                }));
+              }
           }
         }
       }, 100);
@@ -241,6 +248,13 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
       setReconnectAttempts(0);
     }
 
+    const savedTransport = localStorage.getItem(SSH_TRANSPORT_KEY);
+    if (savedTransport === 'http') {
+      transportModeRef.current = 'http';
+      connectHttpRef.current?.(isReconnect);
+      return;
+    }
+
     let wsUrl: string;
     try {
       wsUrl = buildSshWebSocketUrl(instanceId, rows, cols);
@@ -261,6 +275,7 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
 
       ws.onopen = () => {
         opened = true;
+        transportModeRef.current = 'ws';
         setStatus('connected');
         reconnectAttemptsRef.current = 0;
         setReconnectAttempts(0);
@@ -307,9 +322,10 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
         inputDisposableRef.current = null;
 
         if (!opened) {
-          write(
-            `\r\n\x1b[31mWebSocket handshake failed\x1b[0m (${reason}). Verify the reverse proxy forwards Upgrade requests to the Node server on port 3001.\r\n`,
-          );
+          localStorage.setItem(SSH_TRANSPORT_KEY, 'http');
+          transportModeRef.current = 'http';
+          write(`\r\n\x1b[33mWebSocket unavailable\x1b[0m — switching to HTTP transport...\r\n`);
+          connectHttpRef.current?.(isReconnect || false);
           return;
         }
 
@@ -343,7 +359,9 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
         inputDisposableRef.current?.dispose();
       } catch {}
       inputDisposableRef.current = termRef.current?.onData((data) => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        if (transportModeRef.current === 'http' && httpTransportRef.current) {
+          httpTransportRef.current.sendInput(data);
+        } else if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ type: 'input', data }));
         }
       }) ?? null;
@@ -353,10 +371,74 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
     }
   }, [instanceId, rows, cols, connectedUser, status, write]);
 
+  const connectHttp = useCallback((isReconnect = false) => {
+    if (status === 'connecting' || status === 'connected') return;
+    if (!isReconnect) {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      reconnectAttemptsRef.current = 0;
+      setReconnectAttempts(0);
+    }
+
+    transportModeRef.current = 'http';
+
+    const transport = new SshHttpTransport({
+      instanceId,
+      rows: rowsRef.current,
+      cols: colsRef.current,
+      onOutput: (data) => {
+        write(data);
+        setLastActivity(Date.now());
+      },
+      onStatus: (message) => {
+        write(`\r\n[${message}]\r\n`);
+      },
+      onConnected: () => {
+        setStatus('connected');
+        reconnectAttemptsRef.current = 0;
+        setReconnectAttempts(0);
+        setLastActivity(Date.now());
+        write(`\r\nConnected as ${connectedUser}@${instanceId}\r\n`);
+        if (isReconnect) {
+          write('\r\n[Terminal reconnected]\r\n');
+        }
+      },
+      onError: (message) => {
+        setStatus('error');
+        write(`\r\n\x1b[31mHTTP transport error:\x1b[0m ${message}\r\n`);
+      },
+      onClose: (message) => {
+        setStatus('disconnected');
+        write(`\r\n[session closed${message ? ': ' + message : ''}]\r\n`);
+      },
+    });
+
+    httpTransportRef.current = transport;
+    setStatus('connecting');
+    write('\r\n\x1b[33mConnecting via HTTP transport...\x1b[0m\r\n');
+
+    transport.connect();
+
+    try { inputDisposableRef.current?.dispose(); } catch {}
+    inputDisposableRef.current = termRef.current?.onData((data) => {
+      transport.sendInput(data);
+    }) ?? null;
+  }, [instanceId, connectedUser, status, write]);
+
+  useEffect(() => {
+    connectHttpRef.current = connectHttp;
+  }, [connectHttp]);
+
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
+    }
+    if (transportModeRef.current === 'http' && httpTransportRef.current) {
+      httpTransportRef.current.disconnect();
+      httpTransportRef.current = null;
     }
     try { wsRef.current?.close(); } catch {}
     wsRef.current = null;
@@ -381,8 +463,15 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
         // ignore
       }
       try {
+        if (httpTransportRef.current) {
+          httpTransportRef.current.disconnect();
+          httpTransportRef.current = null;
+        }
+      } catch (err) {
+        // ignore
+      }
+      try {
         if (wsRef.current) {
-          // Send a clean close if still connected
           if (wsRef.current.readyState === WebSocket.OPEN) {
             wsRef.current.close(1000, 'Component unmounted');
           } else {

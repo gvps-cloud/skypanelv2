@@ -3197,5 +3197,35 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "path": "/api/theme",
     "protected": false,
     "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/vps/:id/ssh/:sessionId/disconnect",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/vps/:id/ssh/:sessionId/input",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/vps/:id/ssh/:sessionId/resize",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/vps/:id/ssh/:sessionId/stream",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/vps/:id/ssh/connect",
+    "protected": true,
+    "admin": false
   }
 ];
