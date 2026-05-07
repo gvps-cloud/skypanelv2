@@ -186,8 +186,8 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             url: `/admin#blog-management`,
             isActive: ["blog-management", "blog-categories"].includes(activeAnchor),
             items: [
-              { title: "Blog Posts", url: `/admin#blog-management`, isActive: activeAnchor === "blog-management" },
               { title: "Blog Categories", url: `/admin#blog-categories`, isActive: activeAnchor === "blog-categories" },
+              { title: "Blog Posts", url: `/admin#blog-management`, isActive: activeAnchor === "blog-management" },
             ],
           },
           {

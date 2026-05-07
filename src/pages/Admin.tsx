@@ -2330,6 +2330,9 @@ const Admin: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   {formatCountValue(attentionServers)} attention and {formatCountValue(provisioningServers)} provisioning
                 </p>
+                <div className="mt-3 h-9 w-full">
+                  <StatusHeartbeat className="h-9 w-full" height={36} phaseOffset={Math.PI * 0.5} />
+                </div>
               </CardContent>
             </Card>
             <Card className="overflow-hidden border-primary/25">
@@ -2341,6 +2344,9 @@ const Admin: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   {formatCountValue(inactiveProviders)} inactive integrations
                 </p>
+                <div className="mt-3 h-9 w-full">
+                  <StatusHeartbeat className="h-9 w-full" height={36} phaseOffset={Math.PI} />
+                </div>
               </CardContent>
             </Card>
             <Card className="overflow-hidden border-primary/25">
@@ -2352,6 +2358,9 @@ const Admin: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   {formatCountValue(activePlanCount)} active plans
                 </p>
+                <div className="mt-3 h-9 w-full">
+                  <StatusHeartbeat className="h-9 w-full" height={36} phaseOffset={Math.PI * 1.5} />
+                </div>
               </CardContent>
             </Card>
           </div>

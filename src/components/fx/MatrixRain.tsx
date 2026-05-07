@@ -16,12 +16,14 @@ export interface MatrixRainProps {
   density?: MatrixRainDensity;
   /** Optional hue override (0–360); otherwise follows --primary */
   hue?: number;
+  /** When true, the glyph logo follows the mouse cursor. */
+  followCursor?: boolean;
 }
 
 /**
  * Theme-aware glyph rain wrapper around DataStreamCanvas.
  */
-export function MatrixRain({ className, density = "normal", hue }: MatrixRainProps) {
+export function MatrixRain({ className, density = "normal", hue, followCursor }: MatrixRainProps) {
   const reduced = usePrefersReducedMotion();
   const [narrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false,
@@ -45,6 +47,7 @@ export function MatrixRain({ className, density = "normal", hue }: MatrixRainPro
         cellSize={cellSize}
         reducedMotion={effectiveReduced}
         pauseWhenOffscreen
+        followCursor={followCursor}
         {...(typeof hue === "number" ? { hue } : {})}
       />
     </div>

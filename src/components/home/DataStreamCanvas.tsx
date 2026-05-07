@@ -152,6 +152,8 @@ interface DataStreamCanvasProps {
   /** Pause animation when the canvas scrolls off-screen (saves CPU). */
   pauseWhenOffscreen?: boolean
   frames?: FrameDef[]
+  /** When true, the rendered icon/logo shifts to follow the mouse cursor. */
+  followCursor?: boolean
 }
 
 export default function DataStreamCanvas({
@@ -161,6 +163,7 @@ export default function DataStreamCanvas({
   reducedMotion = false,
   pauseWhenOffscreen = false,
   frames = FRAMES,
+  followCursor = false,
 }: DataStreamCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const offscreenVisibleRef = useRef(true)
@@ -192,6 +195,12 @@ export default function DataStreamCanvas({
   })
 
   const allMasksLoadedRef = useRef(false)
+
+  const pointerOffsetRef = useRef({ col: 0, row: 0 })
+  const targetOffsetRef = useRef({ col: 0, row: 0 })
+  const pointerActiveRef = useRef(false)
+  const followCursorRef = useRef(followCursor)
+  followCursorRef.current = followCursor
 
   const resolveHue = useCallback(() => {
     if (typeof hueProp === "number" && Number.isFinite(hueProp)) return hueProp
@@ -262,6 +271,8 @@ export default function DataStreamCanvas({
           staticCellSize,
           resolveHue(),
           resolveSaturation(),
+          Math.round(pointerOffsetRef.current.col),
+          Math.round(pointerOffsetRef.current.row),
         )
       }
     },
@@ -298,6 +309,9 @@ export default function DataStreamCanvas({
     regenerateFlipMap(flipMapRef.current)
     masksRef.current = new Array(framesRef.current.length).fill(null)
     allMasksLoadedRef.current = false
+    pointerOffsetRef.current = { col: 0, row: 0 }
+    targetOffsetRef.current = { col: 0, row: 0 }
+    pointerActiveRef.current = false
     bakeGenerationRef.current += 1
     const gen = bakeGenerationRef.current
     void bakeAllMasks(cols, rows, gen, cellSize)
@@ -334,6 +348,73 @@ export default function DataStreamCanvas({
   }, [resize])
 
   useEffect(() => {
+    if (!followCursor) return
+    const container = containerRef.current
+    if (!container) return
+
+    let staticRedrawScheduled = false
+    const scheduleStaticRedraw = () => {
+      if (!reducedMotionRef.current) return
+      if (staticRedrawScheduled) return
+      staticRedrawScheduled = true
+      requestAnimationFrame(() => {
+        staticRedrawScheduled = false
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+        const { cols, rows } = dimsRef.current
+        const mask = masksRef.current[0]
+        if (!mask || cols <= 0 || rows <= 0 || mask.length !== cols * rows) return
+        pointerOffsetRef.current.col = targetOffsetRef.current.col
+        pointerOffsetRef.current.row = targetOffsetRef.current.row
+        drawStaticLogo(
+          canvas,
+          ctx,
+          mask,
+          cols,
+          rows,
+          cellSize,
+          resolveHue(),
+          resolveSaturation(),
+          Math.round(pointerOffsetRef.current.col),
+          Math.round(pointerOffsetRef.current.row),
+        )
+      })
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const rect = container.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      const mx = event.clientX - rect.left
+      const my = event.clientY - rect.top
+      const { cols, rows } = dimsRef.current
+      if (cols <= 0 || rows <= 0) return
+      const targetCol = Math.floor(mx / cellSize) - Math.floor(cols / 2)
+      const targetRow = Math.floor(my / cellSize) - Math.floor(rows / 2)
+      targetOffsetRef.current = { col: targetCol, row: targetRow }
+      pointerActiveRef.current = true
+      scheduleStaticRedraw()
+    }
+
+    const handlePointerLeave = () => {
+      targetOffsetRef.current = { col: 0, row: 0 }
+      pointerActiveRef.current = false
+      scheduleStaticRedraw()
+    }
+
+    container.addEventListener("pointermove", handlePointerMove)
+    container.addEventListener("pointerleave", handlePointerLeave)
+    container.addEventListener("pointercancel", handlePointerLeave)
+
+    return () => {
+      container.removeEventListener("pointermove", handlePointerMove)
+      container.removeEventListener("pointerleave", handlePointerLeave)
+      container.removeEventListener("pointercancel", handlePointerLeave)
+    }
+  }, [cellSize, resolveHue, resolveSaturation])
+
+  useEffect(() => {
     if (!reducedMotion) return
     const canvas = canvasRef.current
     if (!canvas) return
@@ -343,7 +424,24 @@ export default function DataStreamCanvas({
     const { cols, rows } = dimsRef.current
     const mask = masksRef.current[0]
     if (cols > 0 && rows > 0 && mask && mask.length === cols * rows) {
-      drawStaticLogo(canvas, ctx, mask, cols, rows, cellSize, resolveHue(), resolveSaturation())
+      let offC = 0
+      let offR = 0
+      if (followCursorRef.current) {
+        offC = Math.round(pointerOffsetRef.current.col)
+        offR = Math.round(pointerOffsetRef.current.row)
+      }
+      drawStaticLogo(
+        canvas,
+        ctx,
+        mask,
+        cols,
+        rows,
+        cellSize,
+        resolveHue(),
+        resolveSaturation(),
+        offC,
+        offR,
+      )
     }
 
     return () => {
@@ -447,6 +545,18 @@ export default function DataStreamCanvas({
       const hue = resolveHue()
       const saturation = resolveSaturation()
 
+      let offC = 0
+      let offR = 0
+      if (followCursorRef.current) {
+        const easeFactor = 0.18
+        pointerOffsetRef.current.col +=
+          (targetOffsetRef.current.col - pointerOffsetRef.current.col) * easeFactor
+        pointerOffsetRef.current.row +=
+          (targetOffsetRef.current.row - pointerOffsetRef.current.row) * easeFactor
+        offC = Math.round(pointerOffsetRef.current.col)
+        offR = Math.round(pointerOffsetRef.current.row)
+      }
+
       ctx.font = GLYPH_FONT(cellSize)
       ctx.clearRect(0, 0, w, h)
 
@@ -458,9 +568,20 @@ export default function DataStreamCanvas({
       let i = 0
       for (let r = 0; r < rows; r++) {
         const y = r * cellSize
+        const sr = r - offR
+        const rowInRange = sr >= 0 && sr < rows
         for (let c = 0; c < cols; c++) {
-          const aByte = curMask[i]!
-          const bByte = nm[i]!
+          const sc = c - offC
+          let aByte = 0
+          let bByte = 0
+          if (followCursorRef.current && rowInRange && sc >= 0 && sc < cols) {
+            const si = sc + sr * cols
+            aByte = curMask[si]!
+            bByte = nm[si]!
+          } else {
+            aByte = curMask[i]!
+            bByte = nm[i]!
+          }
           const a = aByte / 255
           const b = bByte / 255
 
@@ -558,6 +679,8 @@ function drawStaticLogo(
   cellSize: number,
   hue: number,
   saturation: number,
+  offC: number = 0,
+  offR: number = 0,
 ): void {
   const { width, height } = canvas
   const dpr = window.devicePixelRatio || 1
@@ -571,8 +694,15 @@ function drawStaticLogo(
   let i = 0
   for (let r = 0; r < rows; r++) {
     const y = r * cellSize
+    const sr = r - offR
+    const rowInRange = sr >= 0 && sr < rows
     for (let c = 0; c < cols; c++) {
-      const m = mask[i]! / 255
+      const sc = c - offC
+      let mByte = 0
+      if (rowInRange && sc >= 0 && sc < cols) {
+        mByte = mask[sc + sr * cols]!
+      }
+      const m = mByte / 255
       const ch = CHARS[(i * 13 + 7) % CHAR_POOL_SIZE]!
       const baseNoise = 0.06
       const litBoost = 0.85 * m

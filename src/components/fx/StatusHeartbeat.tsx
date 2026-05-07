@@ -7,6 +7,8 @@ export interface StatusHeartbeatProps {
   /** Optional series 0..1; if omitted, synthetic animation */
   values?: number[];
   height?: number;
+  /** Phase offset (0..2π) for unique wave timing per instance */
+  phaseOffset?: number;
 }
 
 function parsePrimaryHue(): number {
@@ -20,7 +22,7 @@ function parsePrimaryHue(): number {
 /**
  * Small canvas sparkline; pauses when off-screen.
  */
-export function StatusHeartbeat({ className, values, height = 36 }: StatusHeartbeatProps) {
+export function StatusHeartbeat({ className, values, height = 36, phaseOffset = 0 }: StatusHeartbeatProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduced = usePrefersReducedMotion();
   const rafRef = useRef<number>(0);
@@ -83,11 +85,11 @@ export function StatusHeartbeat({ className, values, height = 36 }: StatusHeartb
 
     const hue = parsePrimaryHue();
 
-    const synth = (len: number, t: number): number[] => {
+    const synth = (len: number, t: number, offset: number): number[] => {
       const out: number[] = [];
       for (let i = 0; i < len; i++) {
-        const phase = (i * 0.35 + t * 0.002) % (Math.PI * 2);
-        out.push(0.35 + 0.35 * Math.sin(phase) + 0.15 * Math.sin(i * 0.8 + t * 0.01));
+        const phase = (i * 0.35 + t * 0.002 + offset) % (Math.PI * 2);
+        out.push(0.35 + 0.35 * Math.sin(phase) + 0.15 * Math.sin(i * 0.8 + t * 0.01 + offset));
       }
       return out.map((v) => Math.min(1, Math.max(0, v)));
     };
@@ -103,7 +105,7 @@ export function StatusHeartbeat({ className, values, height = 36 }: StatusHeartb
       if (staticValues) {
         data = values!;
       } else {
-        data = synth(48, reduced ? 0 : ts);
+        data = synth(48, reduced ? 0 : ts, phaseOffset);
       }
       draw(ctx, w, hh, data, hue);
     };
@@ -125,7 +127,7 @@ export function StatusHeartbeat({ className, values, height = 36 }: StatusHeartb
       ro.disconnect();
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [draw, height, reduced, values]);
+  }, [draw, height, phaseOffset, reduced, values]);
 
   return (
     <div className={cn("w-full", className)} style={{ height }}>

@@ -469,7 +469,7 @@ const Dashboard: React.FC = () => {
     <div className="space-y-6 font-mono">
       <TerminalPageHeader command="dashboard --watch" />
       <div className="relative hidden md:block h-24 rounded-sm border border-border overflow-hidden">
-        <MatrixRain density="subdued" className="h-full min-h-[6rem]" />
+        <MatrixRain density="subdued" followCursor className="h-full min-h-[6rem]" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/92 via-background/35 to-transparent pointer-events-none" />
         <div className="absolute left-4 top-1/2 -translate-y-1/2 z-[2] max-w-[60%]">
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">workspace</p>
