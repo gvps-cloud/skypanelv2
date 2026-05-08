@@ -71,7 +71,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pagination } from "@/components/ui/Pagination";
+import Pagination from "@/components/ui/Pagination";
 import { apiClient, buildApiUrl } from "@/lib/api";
 
 // Types
