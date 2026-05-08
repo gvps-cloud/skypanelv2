@@ -1852,6 +1852,33 @@ const VPS: React.FC = () => {
     createForm.image,
   ]);
 
+  const canNavigateToStep = useCallback(
+    (targetStep: number) => {
+      const hasLabelAndCategory = Boolean(
+        createForm.provider_id && createForm.label && createForm.type_class,
+      );
+      const hasRegion = Boolean(createForm.region);
+      const hasPlan = Boolean(createForm.type);
+      const hasImage = Boolean(createForm.image);
+
+      if (targetStep <= 1) return true;
+      if (targetStep === 2) return hasLabelAndCategory;
+      if (targetStep === 3) return hasLabelAndCategory && hasRegion;
+      if (targetStep >= 4 && targetStep <= 6) {
+        return hasLabelAndCategory && hasRegion && hasPlan;
+      }
+      return hasLabelAndCategory && hasRegion && hasPlan && hasImage;
+    },
+    [
+      createForm.provider_id,
+      createForm.label,
+      createForm.type_class,
+      createForm.region,
+      createForm.type,
+      createForm.image,
+    ],
+  );
+
   const handleNext = () => {
     const nextStep = getNextStep(createStep, activeSteps);
     if (nextStep !== null) {
@@ -2054,7 +2081,12 @@ const VPS: React.FC = () => {
           <RegionAccordionSelect
             regions={filteredCreateRegionOptions}
             selectedRegion={createForm.region}
-            onSelect={(regionId) => setCreateForm({ ...createForm, region: regionId })}
+            onSelect={(regionId) =>
+              setCreateForm({
+                region: regionId,
+                type: createForm.region === regionId ? createForm.type : "",
+              })
+            }
             loading={createRegionsLoading}
             error={createRegionsError}
           />
@@ -2492,6 +2524,10 @@ const VPS: React.FC = () => {
         onStepChange={(index) => {
           const step = activeSteps[index];
           if (step) {
+            if (!canNavigateToStep(step.originalStepNumber)) {
+              toast.error("Complete the earlier VPS setup steps first.");
+              return;
+            }
             setCreateStep(step.originalStepNumber);
           }
         }}

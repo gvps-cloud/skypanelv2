@@ -31,7 +31,7 @@ export const CostSummary: React.FC<CostSummaryProps> = ({
 
       try {
         setLoading(true);
-        const data = await apiClient.get<{ plans?: VPSPlan[] }>("/api/vps/plans");
+        const data = await apiClient.get<{ plans?: VPSPlan[] }>("/vps/plans");
 
         const selectedPlan = (data.plans || []).find(
           (p: VPSPlan) => p.id === planId

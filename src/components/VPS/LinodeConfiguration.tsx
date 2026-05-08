@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Eye, EyeOff, Shield } from 'lucide-react';
-import { SSHKeyAccordionSelect } from './SSHKeyAccordionSelect';
+import { AlertTriangle, Eye, EyeOff, Key, Loader2, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CreateVPSForm } from '@/types/vps';
@@ -11,7 +10,7 @@ import { BackupConfiguration } from './BackupConfiguration';
 import { CostSummary } from './CostSummary';
 
 interface SSHKey {
-  id: number;
+  id: number | string;
   label: string;
   ssh_key: string;
   created: string;
@@ -39,7 +38,7 @@ export default function LinodeConfiguration({
         setLoadingKeys(true);
         setKeysError(null);
         const providerId = formData.provider_id || 'active';
-        const data = await apiClient.get<{ ssh_keys?: SSHKey[] }>(`/api/vps/providers/${providerId}/ssh-keys`);
+        const data = await apiClient.get<{ ssh_keys?: SSHKey[] }>(`/vps/providers/${providerId}/ssh-keys`);
 
         setSshKeys(data.ssh_keys || []);
       } catch (err: any) {
@@ -80,7 +79,7 @@ export default function LinodeConfiguration({
     setPasswordError(error);
   };
 
-  const handleSSHKeyToggle = (keyId: number) => {
+  const handleSSHKeyToggle = (keyId: number | string) => {
     const currentKeys = formData.sshKeys || [];
     const keyIdStr = String(keyId);
     
@@ -171,13 +170,78 @@ export default function LinodeConfiguration({
       </div>
 
       {/* SSH Keys - Optional */}
-      <SSHKeyAccordionSelect
-        sshKeys={sshKeys}
-        selectedKeyIds={formData.sshKeys || []}
-        onKeyToggle={handleSSHKeyToggle}
-        loading={loadingKeys}
-        error={keysError ? getUserFriendlyErrorMessage(keysError, 'linode') : null}
-      />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Key className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-sm font-medium text-foreground">
+            SSH Keys (Optional)
+          </Label>
+        </div>
+
+        {loadingKeys ? (
+          <div className="flex items-center justify-center py-4 space-x-2">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Loading SSH keys...</span>
+          </div>
+        ) : keysError ? (
+          <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {getUserFriendlyErrorMessage(keysError, 'linode')}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  SSH keys are optional. You can continue without them.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : sshKeys.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              No SSH keys found. You can add SSH keys in the SSH Keys page.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sshKeys.map((key) => {
+              const isSelected = (formData.sshKeys || []).includes(String(key.id));
+
+              return (
+                <button
+                  key={key.id}
+                  type="button"
+                  onClick={() => handleSSHKeyToggle(key.id)}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-all",
+                    isSelected
+                      ? 'border-primary bg-primary/10 dark:bg-primary/20'
+                      : 'border-border hover:border-primary/40 hover:bg-muted/40',
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    readOnly
+                    tabIndex={-1}
+                    className="mt-0.5 h-4 w-4 pointer-events-none text-primary focus:ring-primary border rounded"
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {key.label}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground font-mono">
+                      {key.ssh_key.substring(0, 50)}...
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Linode-specific options */}
       <div className="space-y-4 pt-2 border-t">

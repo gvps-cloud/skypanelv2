@@ -5,7 +5,7 @@
  * Groups regions by country with flags for easy identification.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Search, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { CountryFlag } from '@/components/regions/countryFlags';
 
 export interface RegionOption {
@@ -72,6 +71,15 @@ export function RegionMultiSelect({
 }: RegionMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const portalContainer = useMemo(() => {
+    if (!open || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    return triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null | undefined;
+  }, [open]);
 
   // Group regions by country
   const groupedRegions = useMemo(() => {
@@ -129,9 +137,10 @@ export function RegionMultiSelect({
 
   return (
     <div className="space-y-2">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover modal={false} open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             type="button"
             variant="outline"
             role="combobox"
@@ -143,8 +152,14 @@ export function RegionMultiSelect({
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-          <ScrollArea className="max-h-80">
+        <PopoverContent
+          container={portalContainer ?? undefined}
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onWheel={(event) => event.stopPropagation()}
+        >
+          <div className="max-h-80 overflow-y-auto overflow-x-hidden overscroll-contain overscroll-y-contain touch-pan-y overscroll-behavior-y-contain touch-action-pan-y">
             {/* Search Input */}
             <div className="p-3 border-b sticky top-0 bg-background z-10">
               <div className="relative">
@@ -232,7 +247,7 @@ export function RegionMultiSelect({
                 );
               })
             )}
-          </ScrollArea>
+          </div>
         </PopoverContent>
       </Popover>
     </div>

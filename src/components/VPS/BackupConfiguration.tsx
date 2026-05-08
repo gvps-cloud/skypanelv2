@@ -46,6 +46,7 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
 }) => {
   const [plan, setPlan] = useState<VPSPlan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -56,16 +57,19 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
 
       try {
         setLoading(true);
-        const data = await apiClient.get<{ plans?: VPSPlan[] }>("/api/vps/plans");
+        setLoadFailed(false);
+        const data = await apiClient.get<{ plans?: VPSPlan[] }>("/vps/plans");
 
         const selectedPlan = (data.plans || []).find(
           (p: VPSPlan) => p.id === planId
         );
 
         setPlan(selectedPlan || null);
+        setLoadFailed(!selectedPlan);
       } catch (err) {
         console.error("Failed to fetch plan details:", err);
         setPlan(null);
+        setLoadFailed(true);
       } finally {
         setLoading(false);
       }
@@ -79,30 +83,10 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
   const backupMarkup = toCurrencyNumber(plan?.backup_upcharge_monthly);
   const backupCostMonthly = baseBackupPrice + backupMarkup;
 
-  // Sync frequency with enabled state (always use 'weekly' internally for compatibility)
-  useEffect(() => {
-    if (backupsEnabled) {
-      onFrequencyChange("weekly"); // Use 'weekly' as the standard enabled state
-    } else {
-      onFrequencyChange("none");
-    }
-  }, [backupsEnabled, onFrequencyChange]);
-
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4 text-muted-foreground" />
-          <Label className="text-sm font-medium text-foreground">Backups</Label>
-        </div>
-        <div className="text-sm text-muted-foreground">Loading backup options...</div>
-      </div>
-    );
-  }
-
-  if (!plan) {
-    return null;
-  }
+  const handleBackupsChange = (enabled: boolean) => {
+    onBackupsChange(enabled);
+    onFrequencyChange(enabled ? "weekly" : "none");
+  };
 
   return (
     <div className="space-y-4">
@@ -111,7 +95,7 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
         <input
           type="checkbox"
           checked={backupsEnabled}
-          onChange={(e) => onBackupsChange(e.target.checked)}
+          onChange={(e) => handleBackupsChange(e.target.checked)}
           className="mt-0.5 h-4 w-4 text-primary focus:ring-primary border rounded"
         />
         <div className="flex-1">
@@ -122,8 +106,15 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
             </p>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Automatic daily backups of your server
+            {loading
+              ? "Loading backup pricing..."
+              : "Automatic daily backups of your server"}
           </p>
+          {loadFailed && !loading && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              Backup pricing could not be loaded, but this option will be validated before provisioning.
+            </p>
+          )}
         </div>
       </label>
 
@@ -140,8 +131,16 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
                 </span>
               </div>
               <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-                <DollarSign className="h-3.5 w-3.5" />
-                <span>{backupCostMonthly.toFixed(2)}/mo</span>
+                {loading || !plan ? (
+                  <span className="text-xs text-muted-foreground">
+                    {loading ? "Loading price..." : "Price unavailable"}
+                  </span>
+                ) : (
+                  <>
+                    <DollarSign className="h-3.5 w-3.5" />
+                    <span>{backupCostMonthly.toFixed(2)}/mo</span>
+                  </>
+                )}
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
