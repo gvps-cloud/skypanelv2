@@ -61,7 +61,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MatrixRain } from "@/components/fx/MatrixRain";
-import { StatusHeartbeat } from "@/components/fx/StatusHeartbeat";
 import { TerminalPanel, TerminalPageHeader } from "@/components/terminal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -2315,7 +2314,7 @@ const Admin: React.FC = () => {
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card className="overflow-hidden border-primary/25">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Support Tickets
                 </p>
@@ -2323,13 +2322,10 @@ const Admin: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   {formatCountValue(urgentTickets)} urgent and {formatCountValue(inProgressTickets)} in progress
                 </p>
-                <div className="mt-3 h-9 w-full">
-                  <StatusHeartbeat className="h-9 w-full" height={36} />
-                </div>
               </CardContent>
             </Card>
             <Card className="overflow-hidden border-primary/25">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Active Servers
                 </p>
@@ -2337,13 +2333,10 @@ const Admin: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   {formatCountValue(attentionServers)} attention and {formatCountValue(provisioningServers)} provisioning
                 </p>
-                <div className="mt-3 h-9 w-full">
-                  <StatusHeartbeat className="h-9 w-full" height={36} phaseOffset={Math.PI * 0.5} />
-                </div>
               </CardContent>
             </Card>
             <Card className="overflow-hidden border-primary/25">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Active Providers
                 </p>
@@ -2351,13 +2344,10 @@ const Admin: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   {formatCountValue(inactiveProviders)} inactive integrations
                 </p>
-                <div className="mt-3 h-9 w-full">
-                  <StatusHeartbeat className="h-9 w-full" height={36} phaseOffset={Math.PI} />
-                </div>
               </CardContent>
             </Card>
             <Card className="overflow-hidden border-primary/25">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Avg Plan Markup
                 </p>
@@ -2365,9 +2355,6 @@ const Admin: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   {formatCountValue(activePlanCount)} active plans
                 </p>
-                <div className="mt-3 h-9 w-full">
-                  <StatusHeartbeat className="h-9 w-full" height={36} phaseOffset={Math.PI * 1.5} />
-                </div>
               </CardContent>
             </Card>
           </div>

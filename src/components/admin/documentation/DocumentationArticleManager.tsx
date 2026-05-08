@@ -71,6 +71,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pagination } from "@/components/ui/Pagination";
 import { apiClient, buildApiUrl } from "@/lib/api";
 
 // Types
@@ -207,6 +208,8 @@ export default function DocumentationArticleManager() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -312,6 +315,14 @@ export default function DocumentationArticleManager() {
   useEffect(() => {
     fetchArticles();
   }, [fetchArticles]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(articles.length / itemsPerPage));
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [articles.length, itemsPerPage]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedArticles = articles.slice(startIndex, startIndex + itemsPerPage);
 
   // Handle drag end
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -550,7 +561,10 @@ export default function DocumentationArticleManager() {
           </CardTitle>
           <Select
             value={selectedCategoryId}
-            onValueChange={setSelectedCategoryId}
+            onValueChange={(value) => {
+              setSelectedCategoryId(value);
+              setCurrentPage(1);
+            }}
           >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Filter by category" />
@@ -584,7 +598,7 @@ export default function DocumentationArticleManager() {
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={articles.map((a) => a.id)}
+              items={paginatedArticles.map((a) => a.id)}
               strategy={verticalListSortingStrategy}
             >
               <Table>
@@ -600,7 +614,7 @@ export default function DocumentationArticleManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {articles.map((article) => (
+                  {paginatedArticles.map((article) => (
                     <SortableRow
                       key={article.id}
                       article={article}
@@ -614,6 +628,18 @@ export default function DocumentationArticleManager() {
             </SortableContext>
           </DndContext>
         )}
+
+        <Pagination
+          currentPage={currentPage}
+          totalItems={articles.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(value) => {
+            setItemsPerPage(value);
+            setCurrentPage(1);
+          }}
+          itemsPerPageOptions={[10, 25, 50]}
+        />
       </CardContent>
 
       {/* Create Dialog */}
