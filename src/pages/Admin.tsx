@@ -3563,9 +3563,8 @@ const Admin: React.FC = () => {
             </div>
 
             <Tabs defaultValue="availability" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:w-auto lg:inline-grid">
                 <TabsTrigger value="availability">Availability</TabsTrigger>
-                <TabsTrigger value="theme">Theme</TabsTrigger>
                 <TabsTrigger value="category-mappings">
                   Category Mappings
                 </TabsTrigger>

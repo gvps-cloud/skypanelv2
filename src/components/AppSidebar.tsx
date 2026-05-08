@@ -123,7 +123,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       if (isAdminRoute) {
         const activeAnchor = currentHash || "dashboard";
 
-        // Dashboard first; remaining sections by label length (long → short), like the customer nav taper.
+        // Dashboard first, then Support & Intake, then remaining sections by label length (long → short).
         const adminDashboard = {
           title: "Dashboard",
           icon: LayoutDashboard,
@@ -277,12 +277,22 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               { title: "Plans", url: `/admin#enhance-plans`, isActive: activeAnchor === "enhance-plans" },
             ],
           },
-        ].sort((a, b) => {
+        ];
+
+        const supportAndIntakeGroup = adminOtherGroups.find(
+          (group) => group.title === "Support & Intake",
+        );
+
+        const sortedAdminGroups = adminOtherGroups
+          .filter((group) => group.title !== "Support & Intake")
+          .sort((a, b) => {
           const byLen = b.title.length - a.title.length;
           return byLen !== 0 ? byLen : a.title.localeCompare(b.title);
         });
 
-        return [adminDashboard, ...adminOtherGroups];
+        return supportAndIntakeGroup
+          ? [adminDashboard, supportAndIntakeGroup, ...sortedAdminGroups]
+          : [adminDashboard, ...sortedAdminGroups];
       }
 
       // Dashboard stays first; remaining items follow label length (long → short) for a cleaner visual taper.
