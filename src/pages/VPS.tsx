@@ -2279,6 +2279,8 @@ const VPS: React.FC = () => {
       </div>
     </div>
   );
+  const isCreateWizardVisible =
+    showCreateModal && !mobileLoading.isLoading;
 
   if (initialLoading) {
     return (
@@ -2496,8 +2498,12 @@ const VPS: React.FC = () => {
       </Card>
 
       <DialogStack
-        open={showCreateModal}
+        open={isCreateWizardVisible}
         onOpenChange={(isOpen) => {
+          if (!isOpen && mobileLoading.isLoading) {
+            return;
+          }
+
           if (isOpen) {
             ensureCreateLabel();
             setShowCreateModal(true);
