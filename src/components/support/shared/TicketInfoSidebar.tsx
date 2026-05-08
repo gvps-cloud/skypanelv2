@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { 
   Calendar, 
   Copy,
@@ -31,7 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SSHTerminal } from "@/components/VPS/SSHTerminal";
+const LazySSHTerminal = lazy(() =>
+  import("@/components/VPS/SSHTerminal").then((m) => ({ default: m.SSHTerminal })),
+);
 import { formatTicketDateTimeLabel } from "@/lib/supportTicketDisplay";
 
 interface TicketInfoSidebarProps {
@@ -408,10 +410,12 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
         </DialogHeader>
         <div className="flex-1 overflow-hidden relative bg-background">
           {isSSHOpen && ticket.vps_id && (
-            <SSHTerminal
-              instanceId={ticket.vps_id}
-              fitContainer={true}
-            />
+            <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading terminal…</div>}>
+              <LazySSHTerminal
+                instanceId={ticket.vps_id}
+                fitContainer={true}
+              />
+            </Suspense>
           )}
         </div>
       </DialogContent>

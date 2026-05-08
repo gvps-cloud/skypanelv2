@@ -35,6 +35,7 @@ docker/.env
 uploads/
 temp/
 backups/
+tmp/
 
 # Database files
 *.db

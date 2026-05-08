@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronLeft,
@@ -11,7 +11,9 @@ import {
   ServerCog,
   Terminal,
 } from "lucide-react";
-import { SSHTerminal } from "@/components/VPS/SSHTerminal";
+const LazySSHTerminal = lazy(() =>
+  import("@/components/VPS/SSHTerminal").then((m) => ({ default: m.SSHTerminal })),
+);
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -441,7 +443,9 @@ export const AdminServersSection: React.FC<AdminServersSectionProps> = ({
           </DialogHeader>
           <div className="relative flex-1 overflow-hidden bg-background">
             {selectedSshServerId && (
-              <SSHTerminal instanceId={selectedSshServerId} fitContainer={true} />
+              <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading terminal…</div>}>
+                <LazySSHTerminal instanceId={selectedSshServerId} fitContainer={true} />
+              </Suspense>
             )}
           </div>
         </DialogContent>

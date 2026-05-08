@@ -94,12 +94,11 @@ export function getRegionLatLng(regionId: string): [number, number] | undefined 
 }
 
 // ============================================
-// ParticleGlobe / 3D Globe exports
+// Globe coordinate helpers
 // ============================================
 
 /**
  * Convert lat/lng to 3D Vector3 position on a sphere
- * Used by ParticleGlobe for 3D globe rendering
  */
 export function latLongToVector3(lat: number, lon: number, radius: number): { x: number; y: number; z: number } {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -113,7 +112,7 @@ export function latLongToVector3(lat: number, lon: number, radius: number): { x:
 }
 
 /**
- * 3D coordinates for ParticleGlobe
+ * 3D coordinates for globe projection
  * Contains lat/lon for sphere projection
  */
 export const REGION_COORDINATES_3D: Record<string, { lat: number; lon: number }> = {

@@ -7,6 +7,7 @@ import type { AuthenticatedRequest } from "./auth.js";
 import { logActivity } from "../services/activityLogger.js";
 import helmet from "helmet";
 import { config } from "../config/index.js";
+import { isLoopbackHost, getRequestDirectHostname } from "./hostUtils.js";
 
 /**
  * Enhanced Helmet configuration with XSS protection
@@ -33,7 +34,7 @@ import { config } from "../config/index.js";
  */
 const isProduction = config.NODE_ENV === "production";
 
-const buildCspDirectives = () => {
+const buildCspDirectives = (useUpgradeInsecureRequests: boolean) => {
   // Derive WS/WSS origins from configured CORS origins so production
   // domains defined via CLIENT_URL/CORS_ORIGINS can open SSH WebSockets.
   const wsOrigins = config.corsOrigins.flatMap((origin) => {
@@ -100,41 +101,60 @@ const buildCspDirectives = () => {
         ]
       : ["'none'"],
     styleSrc: [...styleSrc],
-    upgradeInsecureRequests: [],
+    upgradeInsecureRequests: useUpgradeInsecureRequests ? [] : null,
     workerSrc: ["'self'", "blob:"],
   };
 };
 
 // Security middleware with per-request nonce generation via Helmet's dynamic directives
 export const createSecurityMiddleware = () => {
+  const sharedHelmetConfig = {
+    hidePoweredBy: true,
+    referrerPolicy: {
+      policy: "strict-origin-when-cross-origin" as const,
+    },
+    noSniff: true,
+    frameguard: {
+      action: "deny" as const,
+    },
+    ieNoOpen: true,
+    dnsPrefetchControl: {
+      allow: false,
+    },
+  };
+
+  const localHelmet = helmet({
+    ...sharedHelmetConfig,
+    contentSecurityPolicy: {
+      directives: buildCspDirectives(false) as any,
+    },
+    hsts: false,
+  });
+
+  const externalHelmet = helmet({
+    ...sharedHelmetConfig,
+    contentSecurityPolicy: {
+      directives: buildCspDirectives(isProduction) as any,
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+  });
+
   return [
     (req: Request, res: Response, next: NextFunction) => {
       const nonce = crypto.randomBytes(16).toString("base64");
       (res as any).locals.cspNonce = nonce;
       next();
     },
-    helmet({
-      hidePoweredBy: true,
-      contentSecurityPolicy: {
-        directives: buildCspDirectives() as any,
-      },
-      hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true,
-      },
-      referrerPolicy: {
-        policy: "strict-origin-when-cross-origin" as const,
-      },
-      noSniff: true,
-      frameguard: {
-        action: "deny" as const,
-      },
-      ieNoOpen: true,
-      dnsPrefetchControl: {
-        allow: false,
-      },
-    }),
+    (req: Request, res: Response, next: NextFunction) => {
+      if (isLoopbackHost(getRequestDirectHostname(req))) {
+        return localHelmet(req, res, next);
+      }
+      return externalHelmet(req, res, next);
+    },
   ];
 };
 

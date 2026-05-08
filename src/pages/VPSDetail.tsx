@@ -77,7 +77,10 @@ import { Area, AreaChart, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ActiveHoursDisplay } from "@/components/VPS/ActiveHoursDisplay";
 import RebuildOSSelect from "@/components/VPS/RebuildOSSelect";
 import { egressService } from "@/services/egressService";
-import SSHTerminal from "@/components/VPS/SSHTerminal";
+import { lazy, Suspense } from "react";
+const LazySSHTerminal = lazy(() =>
+  import("@/components/VPS/SSHTerminal").then((m) => ({ default: m.SSHTerminal })),
+);
 import type {
   BackupPricing,
   FirewallRule,
@@ -3317,10 +3320,12 @@ const VPSDetail: React.FC = () => {
           </DialogHeader>
           <div className="flex-1 overflow-hidden relative bg-background">
             {sshModalOpen && detail?.id && (
-              <SSHTerminal
-                instanceId={detail.id}
-                fitContainer={true}
-              />
+              <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground text-sm">Loading terminal…</div>}>
+                <LazySSHTerminal
+                  instanceId={detail.id}
+                  fitContainer={true}
+                />
+              </Suspense>
             )}
           </div>
         </DialogContent>

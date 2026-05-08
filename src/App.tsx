@@ -15,9 +15,14 @@ import {
 } from "./contexts/ImpersonationContext";
 import { ImpersonationLoadingOverlay } from "./components/admin/ImpersonationLoadingOverlay";
 import { setupAutoLogout } from "@/lib/api";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { useSiteStatus } from "./hooks/useSiteStatus";
+import ScrollToTop from "./components/ScrollToTop";
+import { TerminalErrorScreen } from "./components/terminal";
+import { useHostingStatus, useVpsProductStatus } from "./hooks/useHosting";
+import AppLayout from "./components/AppLayout";
+import PublicLayout from "./components/PublicLayout";
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -25,57 +30,58 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: true,
       retry: 1,
-      staleTime: 30000, // 30 seconds
+      staleTime: 30000,
     },
   },
 });
-import Home from "./pages/HomeRedesign";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import VPS from "./pages/VPS";
-import Billing from "./pages/Billing";
-import EgressCredits from "./pages/EgressCredits";
-import InvoiceDetail from "./pages/InvoiceDetail";
-import TransactionDetail from "./pages/TransactionDetail";
-import BillingPaymentSuccess from "./pages/BillingPaymentSuccess";
-import BillingPaymentCancel from "./pages/BillingPaymentCancel";
-import Support from "./pages/Support";
-import Settings from "./pages/Settings";
-import Admin from "./pages/Admin";
-import VPSDetail from "./pages/VPSDetail";
-import AppLayout from "./components/AppLayout";
-import PublicLayout from "./components/PublicLayout";
-import ScrollToTop from "./components/ScrollToTop";
-import ActivityPage from "./pages/Activity";
-import ApiDocs from "./pages/ApiDocs";
-import FAQ from "./pages/FAQ";
-import AboutUs from "./pages/AboutUs";
-import Contact from "./pages/Contact";
-import Status from "./pages/Status";
-import Regions from "./pages/Regions";
-import TermsOfService from "./pages/TermsOfService";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Pricing from "./pages/Pricing";
-import HostingMarketing from "./pages/HostingMarketing";
-import SSHKeys from "./pages/SSHKeys";
-import Documentation from "./pages/Documentation";
-import PersonalNotes from "./pages/PersonalNotes";
-import OrganizationNotes from "./pages/OrganizationNotes";
 
-import AdminUserDetail from "./pages/admin/AdminUserDetail";
-import Organizations from "./pages/Organizations";
-import AcceptInvitation from "./pages/AcceptInvitation";
-import Hosting from "./pages/Hosting";
-import HostingStore from "./pages/HostingStore";
-import HostingDetail from "./pages/HostingDetail";
-import Maintenance from "./pages/Maintenance";
-import { TerminalErrorScreen } from "./components/terminal";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import { useHostingStatus, useVpsProductStatus } from "./hooks/useHosting";
+const RouteFallback = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+
+const Home = lazy(() => import("./pages/HomeRedesign"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const VPS = lazy(() => import("./pages/VPS"));
+const Billing = lazy(() => import("./pages/Billing"));
+const EgressCredits = lazy(() => import("./pages/EgressCredits"));
+const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
+const TransactionDetail = lazy(() => import("./pages/TransactionDetail"));
+const BillingPaymentSuccess = lazy(() => import("./pages/BillingPaymentSuccess"));
+const BillingPaymentCancel = lazy(() => import("./pages/BillingPaymentCancel"));
+const Support = lazy(() => import("./pages/Support"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Admin = lazy(() => import("./pages/Admin"));
+const VPSDetail = lazy(() => import("./pages/VPSDetail"));
+const ActivityPage = lazy(() => import("./pages/Activity"));
+const ApiDocs = lazy(() => import("./pages/ApiDocs"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Status = lazy(() => import("./pages/Status"));
+const Regions = lazy(() => import("./pages/Regions"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const HostingMarketing = lazy(() => import("./pages/HostingMarketing"));
+const SSHKeys = lazy(() => import("./pages/SSHKeys"));
+const Documentation = lazy(() => import("./pages/Documentation"));
+const PersonalNotes = lazy(() => import("./pages/PersonalNotes"));
+const OrganizationNotes = lazy(() => import("./pages/OrganizationNotes"));
+const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
+const Organizations = lazy(() => import("./pages/Organizations"));
+const AcceptInvitation = lazy(() => import("./pages/AcceptInvitation"));
+const Hosting = lazy(() => import("./pages/Hosting"));
+const HostingStore = lazy(() => import("./pages/HostingStore"));
+const HostingDetail = lazy(() => import("./pages/HostingDetail"));
+const Maintenance = lazy(() => import("./pages/Maintenance"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -325,6 +331,7 @@ function AppRoutes() {
       <AutoLogoutSetup />
       <AnnouncementBannerWrapper>
       <MaintenanceGuard>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/maintenance" element={<Maintenance />} />
@@ -578,6 +585,7 @@ function AppRoutes() {
         <Route path="/organizations/invitations/:token/decline" element={<AcceptInvitation />} />
         <Route path="*" element={<TerminalErrorScreen code="404" title="NOT_FOUND" message="No route matched this path. Check the URL or return home." />} />
       </Routes>
+      </Suspense>
       </MaintenanceGuard>
       </AnnouncementBannerWrapper>
     </>

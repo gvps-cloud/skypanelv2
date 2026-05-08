@@ -5,6 +5,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { isLoopbackHost, getRequestDirectHostname } from './hostUtils.js';
 
 interface RequireHttpsOptions {
   maxAge?: number;
@@ -66,6 +67,13 @@ export function requireHttps(options: RequireHttpsOptions = {}) {
 
   return (req: Request, res: Response, next: NextFunction) => {
     if (process.env.NODE_ENV !== 'production') {
+      return next();
+    }
+
+    // Local production smoke tests use HTTP on loopback; do not hard-redirect
+    // those requests to HTTPS when no local TLS endpoint exists.
+    // Use the direct Host header (not X-Forwarded-Host) to avoid spoofing.
+    if (isLoopbackHost(getRequestDirectHostname(req))) {
       return next();
     }
 

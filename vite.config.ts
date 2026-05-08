@@ -66,6 +66,44 @@ export default defineConfig(({ mode }) => {
         '@': '/src',
       },
     },
+    build: {
+      chunkSizeWarningLimit: 700,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('@tiptap/') || id.includes('prosemirror') || id.includes('lowlight')) {
+                return 'vendor-tiptap';
+              }
+              if (id.includes('xterm') || id.includes('xterm-addon')) {
+                return 'vendor-xterm';
+              }
+              if (id.includes('recharts') || id.includes('d3-') || id.includes('d3/') || id.includes('victory-') || id.includes('react-smooth')) {
+                return 'vendor-recharts';
+              }
+              if (id.includes('leaflet') || id.includes('react-leaflet')) {
+                return 'vendor-leaflet';
+              }
+              if (id.includes('framer-motion')) {
+                return 'vendor-motion';
+              }
+              if (id.includes('@radix-ui/') || id.includes('cmdk') || id.includes('react-hook-form') || id.includes('@hookform/')) {
+                return 'vendor-ui';
+              }
+              if (id.includes('@tanstack/')) {
+                return 'vendor-tanstack';
+              }
+              if (id.includes('react-dom') || id.includes('scheduler')) {
+                return 'vendor-react';
+              }
+              if (id.includes('react/') || id.includes('react@')) {
+                return 'vendor-react';
+              }
+            }
+          },
+        },
+      },
+    },
     plugins: [
       react(),
       tsconfigPaths(),
@@ -73,6 +111,7 @@ export default defineConfig(({ mode }) => {
       removeMockData(),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: null,
         includeAssets: ['favicon.svg', 'logo.svg', 'og-default.png'],
         manifest: {
           name: `${companyName} Cloud Panel`,

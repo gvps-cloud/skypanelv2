@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import {
@@ -24,8 +24,11 @@ import { usePrefersReducedMotion } from "@/components/fx/usePrefersReducedMotion
 import { MatrixRain } from "@/components/fx/MatrixRain";
 import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
-import { LeafletMap } from "@/components/regions";
 import { apiClient } from "@/lib/api";
+
+const LazyLeafletMap = lazy(() =>
+  import("@/components/regions/LeafletMap").then((m) => ({ default: m.LeafletMap })),
+);
 
 interface Region {
   id: string;
@@ -408,13 +411,15 @@ export default function Regions() {
                               <MatrixRain density="subdued" />
                             </div>
                             <div className="relative z-[1] h-full">
-                              <LeafletMap
-                                regions={regions}
-                                latencyState={latencyState}
-                                selectedRegion={selectedRegion}
-                                onRegionClick={handleRegionClick}
-                                onRegionTest={testRegion}
-                              />
+                              <Suspense fallback={<div className="flex h-full items-center justify-center text-muted-foreground text-sm">Loading map…</div>}>
+                                <LazyLeafletMap
+                                  regions={regions}
+                                  latencyState={latencyState}
+                                  selectedRegion={selectedRegion}
+                                  onRegionClick={handleRegionClick}
+                                  onRegionTest={testRegion}
+                                />
+                              </Suspense>
                             </div>
                           </div>
                           <p className="mt-3 text-xs text-muted-foreground">

@@ -1,10 +1,13 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { ClipboardList } from "lucide-react";
 import { ContactCategoryManager } from "@/components/admin/ContactCategoryManager";
 import { ContactMethodManager } from "@/components/admin/ContactMethodManager";
-import PlatformAvailabilityManager from "@/components/admin/PlatformAvailabilityManager";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const PlatformAvailabilityManager = lazy(
+  () => import("@/components/admin/PlatformAvailabilityManager"),
+);
 
 interface AdminContactManagementSectionProps {
   token: string;
@@ -50,7 +53,9 @@ export const AdminContactManagementSection: React.FC<
           </TabsContent>
 
           <TabsContent value="availability">
-            <PlatformAvailabilityManager />
+            <Suspense fallback={<div className="p-6 text-center text-muted-foreground text-sm">Loading…</div>}>
+              <PlatformAvailabilityManager />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>
