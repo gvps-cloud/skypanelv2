@@ -218,13 +218,6 @@ Used for rate limiting and token blacklisting/brute force protection.
 | `VITE_RYBBIT_SESSION_REPLAY` | No | `true` | Enable session replay recording |
 | `VITE_TRACKING_SCRIPT_URL` | No | - | Generic tracking script URL fallback (prefer Rybbit) |
 
-## Backup Configuration (Optional)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `BACKUP_STORAGE_PROVIDER` | No | `local` | Backup storage provider (`local`, `s3`, etc.) |
-| `BACKUP_RETENTION_DAYS` | No | `30` | Number of days to retain backups |
-
 ## Environment-Specific Configurations
 
 ### Development Environment
