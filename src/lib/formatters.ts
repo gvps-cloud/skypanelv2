@@ -64,14 +64,14 @@ export interface FormatGigabytesOptions {
 }
 
 export function formatGigabytes(
-  bytes: number | null | undefined,
+  megabytes: number | null | undefined,
   { precision = 0, fallback = "0 GB" }: FormatGigabytesOptions = {}
 ): string {
-  if (!Number.isFinite(bytes ?? NaN) || !bytes) {
+  if (!Number.isFinite(megabytes ?? NaN) || !megabytes) {
     return fallback;
   }
 
-  const gigabytes = (bytes as number) / 1024;
+  const gigabytes = (megabytes as number) / 1024;
   const normalizedPrecision = Math.max(0, precision);
 
   if (normalizedPrecision === 0) {

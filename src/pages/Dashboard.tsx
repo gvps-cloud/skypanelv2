@@ -486,6 +486,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 font-mono">
       <TerminalPageHeader command="dashboard --watch" />
+      <h1 className="sr-only">Dashboard</h1>
       <div className="relative hidden md:block h-24 rounded-sm border border-border overflow-hidden">
         <MatrixRain density="subdued" followCursor className="h-full min-h-[6rem]" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/92 via-background/35 to-transparent pointer-events-none" />

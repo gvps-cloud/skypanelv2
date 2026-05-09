@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBillingAmount } from "@/lib/formatters";
 import { TerminalPageHeader } from "@/components/terminal";
+import { formatCapacity } from "@/lib/hostingPlanFeatures";
 
 const formatResource = (value: number | null | undefined) => {
   if (value === null || value === undefined || value === -1) return "∞";
@@ -189,14 +190,14 @@ export default function HostingStore() {
                       <TableCell>{formatResource(r?.websites?.total)}</TableCell>
                       <TableCell>
                         {r?.diskspace?.total != null
-                          ? `${formatResource(r.diskspace.total)} MB`
+                          ? formatCapacity(r.diskspace.total)
                           : "∞"}
                       </TableCell>
                       <TableCell>{formatResource(r?.mailboxes?.total)}</TableCell>
                       <TableCell>{formatResource(r?.mysqlDbs?.total)}</TableCell>
                       <TableCell>
                         {r?.transfer?.total != null
-                          ? `${formatResource(r.transfer.total)} MB`
+                          ? formatCapacity(r.transfer.total)
                           : "∞"}
                       </TableCell>
                       <TableCell>{phpDisplay(f?.defaultPhpVersion)}</TableCell>

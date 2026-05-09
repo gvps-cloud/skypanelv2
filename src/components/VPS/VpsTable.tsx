@@ -59,8 +59,8 @@ const statusLabel = (status: VPSInstance["status"]): string => {
   }
 };
 
-const formatInstanceSize = (bytes: number | null | undefined): string =>
-  formatGigabytes(bytes, { fallback: "0 GB" });
+const formatInstanceSize = (megabytes: number | null | undefined): string =>
+  formatGigabytes(megabytes, { fallback: "0 GB" });
 
 const formatDate = (date: string): string =>
   new Date(date).toLocaleString("en-US", {

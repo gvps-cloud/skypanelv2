@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { ScanlineOverlay } from "@/components/fx/ScanlineOverlay";
-import { TypewriterText } from "@/components/fx/TypewriterText";
-import { usePrefersReducedMotion } from "@/components/fx/usePrefersReducedMotion";
+
+
 import { TerminalPanel } from "@/components/terminal";
 import {
   CommandDialog,
@@ -207,7 +207,6 @@ interface CommandNavigationItem {
 const BreadcrumbNavigation: React.FC = () => {
   const location = useLocation();
   const { dynamicOverrides } = useBreadcrumb();
-  const reducedMotion = usePrefersReducedMotion();
 
   // Generate breadcrumbs from current route with dynamic overrides
   const breadcrumbs = useMemo(
@@ -232,11 +231,7 @@ const BreadcrumbNavigation: React.FC = () => {
               <BreadcrumbItem>
                 {crumb.isActive || !crumb.href ? (
                   <BreadcrumbPage className="font-mono text-xs">
-                    {reducedMotion || index !== breadcrumbs.length - 1 ? (
-                      crumb.label
-                    ) : (
-                      <TypewriterText text={crumb.label} speedMs={16} showCursor />
-                    )}
+                    {crumb.label}
                   </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink

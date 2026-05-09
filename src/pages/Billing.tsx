@@ -1088,6 +1088,7 @@ const Billing: React.FC = () => {
                   onClick={loadVPSUptimeData}
                   className="inline-flex items-center px-3 py-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   title="Refresh uptime data"
+                  aria-label="Refresh uptime data"
                 >
                   <RefreshCw className="h-4 w-4" />
                 </button>
@@ -1237,8 +1238,10 @@ const Billing: React.FC = () => {
       {/* Tabs */}
       <Card className="border-primary/25">
         <CardHeader className="border-b border">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-8" role="tablist">
             <button
+              role="tab"
+              aria-selected={activeTab === 'overview'}
               onClick={() => setActiveTab('overview')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'overview'
                   ? 'border-primary text-primary'
@@ -1248,6 +1251,8 @@ const Billing: React.FC = () => {
               Overview
             </button>
             <button
+              role="tab"
+              aria-selected={activeTab === 'transactions'}
               onClick={() => setActiveTab('transactions')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'transactions'
                   ? 'border-primary text-primary'
@@ -1257,6 +1262,8 @@ const Billing: React.FC = () => {
               Wallet Transactions
             </button>
             <button
+              role="tab"
+              aria-selected={activeTab === 'history'}
               onClick={() => setActiveTab('history')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'history'
                   ? 'border-primary text-primary'
@@ -1277,7 +1284,15 @@ const Billing: React.FC = () => {
                   {transactions.map((transaction) => (
                     <div
                       key={transaction.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => navigate(`/billing/transaction/${transaction.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          navigate(`/billing/transaction/${transaction.id}`);
+                        }
+                      }}
                       className="flex items-center justify-between py-3 px-3 -mx-3 border-b border-border border last:border-b-0 rounded-md cursor-pointer hover:bg-secondary/80/50 transition-colors"
                     >
                       <div className="flex items-center">

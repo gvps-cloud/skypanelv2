@@ -51,6 +51,7 @@ interface UserSupportViewProps {
   onFocusTicketHandled?: () => void;
   onCreateTicketHandled?: () => void;
   prefilledTicket?: PrefilledTicketData;
+  hideTicketListHeading?: boolean;
 }
 
 export const UserSupportView: React.FC<UserSupportViewProps> = ({
@@ -60,6 +61,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   onFocusTicketHandled,
   onCreateTicketHandled,
   prefilledTicket,
+  hideTicketListHeading,
 }) => {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -565,8 +567,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
             onCreateTicket={() => setIsCreateModalOpen(true)}
             isLoading={loading}
             showCustomer={true}
-            title="Support Tickets"
             className="min-w-0"
+            hideHeading={hideTicketListHeading}
           />
         </div>
 

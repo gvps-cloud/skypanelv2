@@ -1657,8 +1657,8 @@ const VPS: React.FC = () => {
     return matchesSearch && matchesStatus && matchesRegion;
   });
 
-  const formatSelectedPlanMemory = (bytes: number): string =>
-    formatGigabytes(bytes, { fallback: "0 GB" });
+  const formatSelectedPlanMemory = (megabytes: number): string =>
+    formatGigabytes(megabytes, { fallback: "0 GB" });
 
   // Filter plans based on selected provider
   const filteredProviderPlans = useMemo(() => {

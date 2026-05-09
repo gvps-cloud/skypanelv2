@@ -84,7 +84,7 @@ const formatCount = (
   return new Intl.NumberFormat("en-US").format(value);
 };
 
-const formatCapacity = (
+export const formatCapacity = (
   value: number | null | undefined,
   options?: HostingFeatureDisplayOptions,
 ) => {

@@ -71,7 +71,7 @@ export default function Hosting() {
   const { data: servicesData, isLoading: servicesLoading } = useHostingServices();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [ssoLoading, setSsoLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("active");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -208,6 +208,7 @@ export default function Hosting() {
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
+            aria-label="Search hosting subscriptions"
             placeholder="Search domain, plan, or IP..."
             className="pl-8"
             value={searchQuery}
@@ -275,8 +276,16 @@ export default function Hosting() {
                   <TableRow
                     key={service.id}
                     className={isActive ? "cursor-pointer" : "opacity-60"}
+                    role={isActive ? "button" : undefined}
+                    tabIndex={isActive ? 0 : undefined}
                     onClick={() => {
                       if (isActive) navigate(`/hosting/${service.id}`);
+                    }}
+                    onKeyDown={(e) => {
+                      if (isActive && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault();
+                        navigate(`/hosting/${service.id}`);
+                      }
                     }}
                   >
                     <TableCell className="font-medium">

@@ -105,6 +105,7 @@ const Support: React.FC = () => {
           pendingCreateTicket={pendingCreateTicket}
           onCreateTicketHandled={handleCreateTicketHandled}
           prefilledTicket={prefilledTicket}
+          hideTicketListHeading
         />
       </div>
     </div>

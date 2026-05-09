@@ -25,6 +25,7 @@ interface TicketListProps {
   showCustomer?: boolean;
   title?: string;
   className?: string;
+  hideHeading?: boolean;
 }
 
 export const TicketList: React.FC<TicketListProps> = ({
@@ -37,6 +38,7 @@ export const TicketList: React.FC<TicketListProps> = ({
   showCustomer = false,
   title,
   className,
+  hideHeading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TicketStatus>("all");
@@ -86,9 +88,11 @@ export const TicketList: React.FC<TicketListProps> = ({
       {/* Header */}
       <div className="p-4 border-b border-border bg-background/50 backdrop-blur-sm sticky top-0 z-10 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">
-            {resolvedTitle}
-          </h2>
+          {!hideHeading && (
+            <h2 className="text-lg font-semibold tracking-tight">
+              {resolvedTitle}
+            </h2>
+          )}
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"

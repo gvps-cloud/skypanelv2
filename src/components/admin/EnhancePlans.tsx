@@ -3,6 +3,7 @@ import { useEnhanceAdminPlans, enhanceAdminKeys } from "@/hooks/useEnhanceAdmin"
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatCapacity } from "@/lib/hostingPlanFeatures";
 import {
   Table,
   TableBody,
@@ -75,10 +76,10 @@ export function EnhancePlans() {
     const parts: string[] = [];
     const r = features.resources;
     if (r.websites) parts.push(`${r.websites.total ?? "∞"} sites`);
-    if (r.diskspace) parts.push(`${r.diskspace.total ?? "∞"} MB disk`);
+    if (r.diskspace) parts.push(`${formatCapacity(r.diskspace.total ?? null)} disk`);
     if (r.mailboxes) parts.push(`${r.mailboxes.total ?? "∞"} mail`);
     if (r.mysqlDbs) parts.push(`${r.mysqlDbs.total ?? "∞"} DBs`);
-    if (r.transfer) parts.push(`${r.transfer.total ?? "∞"} MB transfer`);
+    if (r.transfer) parts.push(`${formatCapacity(r.transfer.total ?? null)} transfer`);
     if (r.ftpUsers) parts.push(`${r.ftpUsers.total ?? "∞"} FTP`);
     if (r.customers) parts.push(`${r.customers.total ?? "∞"} cust`);
     // If we didn't match any known keys, show a count
