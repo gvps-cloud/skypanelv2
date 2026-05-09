@@ -17,7 +17,8 @@ lerna-debug.log*
 .opencode
 .codex
 .codacy.yml
-
+.blackboxcli/*
+.blackboxcli
 # Coverage and local analysis artifacts
 coverage/
 audit-baseline.json
