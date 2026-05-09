@@ -11,11 +11,14 @@ See [AGENTS.md](../../AGENTS.md) for dev commands. Key testing reminders:
 ## Running Tests
 
 ```bash
-npx vitest run tests/security/   # security test suite only
-npx vitest run                   # all tests
+npm test                                    # All tests (vitest run)
+npm run test:watch                          # Watch mode
+npm run test:unit                            # Unit tests only (api/ + src/)
+npm run test:coverage                        # All tests with coverage
+npm run test:security                        # Security suite only
+npx vitest run path/to/file.test.ts          # Single file
+npx vitest run api/routes/__tests__/         # All tests in a directory
 ```
-
-There is **no** `npm test` script — always run `npx vitest run` directly.
 
 ## Test Locations
 
