@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Globe2, Key, Server, Ticket } from "lucide-react";
+import { ArrowUpRight, ExternalLink, Globe2, Key, Server, Ticket } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ interface OrganizationResourceTablesProps {
   onOpenHosting: (...args: [string]) => void;
   onOpenTicket: (ticketId: string) => void;
   hostingEnabled?: boolean;
+  vpsEnabled?: boolean;
 }
 
 const DEFAULT_LIMIT = 5;
@@ -118,14 +119,15 @@ export function OrganizationResourceTables({
   onOpenHosting,
   onOpenTicket,
   hostingEnabled = true,
+  vpsEnabled = true,
 }: OrganizationResourceTablesProps) {
-  const [activeTab, setActiveTab] = useState<ResourceTabKey>("vps");
+  const [activeTab, setActiveTab] = useState<ResourceTabKey>(vpsEnabled ? "vps" : "sshKeys");
   const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
 
   useEffect(() => {
-    setActiveTab("vps");
+    setActiveTab(vpsEnabled ? "vps" : "sshKeys");
     setPagination(DEFAULT_PAGINATION);
-  }, [organizationId]);
+  }, [organizationId, vpsEnabled]);
 
   const vpsPage = useMemo(
     () => getPaginatedItems(resources.vps_instances, pagination.vps.page, pagination.vps.limit),
@@ -178,14 +180,15 @@ export function OrganizationResourceTables({
       activationMode="manual"
     >
       <TabsList className="grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-4">
-        <TabsTrigger value="vps">VPS Instances ({resources.vps_instances.length})</TabsTrigger>
-        <TabsTrigger value="sshKeys">SSH Keys ({resources.ssh_keys.length})</TabsTrigger>
+        {vpsEnabled && <TabsTrigger value="vps">VPS Instances ({resources.vps_instances.length})</TabsTrigger>}
+        {vpsEnabled && <TabsTrigger value="sshKeys">SSH Keys ({resources.ssh_keys.length})</TabsTrigger>}
         <TabsTrigger value="tickets">Support Tickets ({resources.tickets.length})</TabsTrigger>
         {hostingEnabled && (
           <TabsTrigger value="hosting">Web Hosting ({resources.hosting_subscriptions.length})</TabsTrigger>
         )}
       </TabsList>
 
+      {vpsEnabled && (
       <TabsContent value="vps">
         <Card className="border-primary/25">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -259,6 +262,7 @@ export function OrganizationResourceTables({
           </CardContent>
         </Card>
       </TabsContent>
+      )}
 
       {hostingEnabled && (
       <TabsContent value="hosting">
@@ -355,6 +359,7 @@ export function OrganizationResourceTables({
       </TabsContent>
       )}
 
+      {vpsEnabled && (
       <TabsContent value="sshKeys">
         <Card className="border-primary/25">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -403,12 +408,14 @@ export function OrganizationResourceTables({
                           : "Pending sync";
 
                         return (
-                          <TableRow
-                            key={sshKey.id}
-                            {...getClickableRowProps(() => onOpenSshKeys(sshKey.id))}
-                          >
-                            <TableCell className="font-medium">{sshKey.name}</TableCell>
-                            <TableCell className="max-w-[320px] truncate font-mono text-xs">
+                          <TableRow key={sshKey.id}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                <Key className="h-4 w-4 text-muted-foreground" />
+                                <span>{sshKey.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm text-muted-foreground">
                               {sshKey.fingerprint}
                             </TableCell>
                             <TableCell>
@@ -416,12 +423,20 @@ export function OrganizationResourceTables({
                                 {syncLabel}
                               </Badge>
                             </TableCell>
-                            <TableCell>{formatTimestamp(sshKey.created_at)}</TableCell>
-                            <TableCell>
-                              <RowActionButton
-                                label={`Open SSH key ${sshKey.name}`}
+                            <TableCell className="text-muted-foreground">
+                              {new Date(sshKey.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => onOpenSshKeys(sshKey.id)}
-                              />
+                                className="h-8 w-8 p-0"
+                                title={`Open SSH key ${sshKey.name}`}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -446,6 +461,7 @@ export function OrganizationResourceTables({
           </CardContent>
         </Card>
       </TabsContent>
+      )}
 
       <TabsContent value="tickets">
         <Card className="border-primary/25">

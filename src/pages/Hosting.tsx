@@ -31,6 +31,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatBillingAmount } from "@/lib/formatters";
 import Pagination from "@/components/ui/Pagination";
 import { TerminalPageHeader } from "@/components/terminal";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface HostingService {
   id: string;
@@ -236,8 +237,29 @@ export default function Hosting() {
       </div>
 
       {servicesLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <div className="space-y-4">
+          <div className="rounded-md border">
+            <div className="bg-muted/30 border-b border-border">
+              <div className="flex items-center px-6 py-3">
+                <Skeleton className="h-3 w-32 mr-8" />
+                <Skeleton className="h-3 w-24 mr-6" />
+                <Skeleton className="h-3 w-20 mr-4" />
+                <Skeleton className="h-3 w-28 mr-4" />
+                <Skeleton className="h-3 w-24 mr-4" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center px-6 py-4 border-b border-border last:border-0">
+                <Skeleton className="h-3 w-32 mr-8" />
+                <Skeleton className="h-3 w-24 mr-6" />
+                <Skeleton className="h-5 w-16 mr-4" />
+                <Skeleton className="h-3 w-28 mr-4" />
+                <Skeleton className="h-3 w-24 mr-4" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center">

@@ -342,12 +342,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
                 isActive: pathname.startsWith("/organizations"),
               },
             ]),
-        {
-          title: "SSH Keys",
-          url: "/ssh-keys",
-          icon: Wrench,
-          isActive: isSshKeysActive,
-        },
         ...(vpsProductStatus?.enabled
           ? [
               {

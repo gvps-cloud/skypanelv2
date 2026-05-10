@@ -557,15 +557,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             },
           ]
         : []),
-      {
-        icon: Key,
-        label: "SSH Keys",
-        href: "/ssh-keys",
-        shortcut: isMac ? "⌥K" : "Alt+K",
-        shortcutKey: "k",
-        requiresShift: false,
-        requiresAlt: true,
-      },
+      ...(vpsProductStatus?.enabled
+        ? [
+            {
+              icon: Key,
+              label: "SSH Keys",
+              href: "/ssh-keys",
+              shortcut: isMac ? "⌥K" : "Alt+K",
+              shortcutKey: "k",
+              requiresShift: false,
+              requiresAlt: true,
+            },
+          ]
+        : []),
       {
         icon: CreditCard,
         label: "Billing",

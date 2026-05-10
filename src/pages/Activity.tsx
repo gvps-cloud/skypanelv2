@@ -17,8 +17,9 @@ import {
 import Pagination from '@/components/ui/Pagination';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { apiClient, buildApiUrl } from '@/lib/api';
-import { useHostingStatus } from '@/hooks/useHosting';
+import { useHostingStatus, useVpsProductStatus } from '@/hooks/useHosting';
 import { TerminalPageHeader } from '@/components/terminal';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ActivityRecord {
   id: string;
@@ -46,11 +47,13 @@ const ActivityPage: React.FC = () => {
   const { user: _user } = useAuth();
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(false);
   /** Maps to `/activity?type=` when scope dropdown used; overridden by `entityTypeText` when set. */
   const [activityScope, setActivityScope] = useState<
-    'all' | 'vps' | 'hosting' | 'enhance'
+    'all' | 'vps' | 'hosting'
   >('all');
   /** Filters the table "Type" column (entity_type). When set, overrides activity scope. */
   const [entityTypeText, setEntityTypeText] = useState('');
@@ -116,6 +119,11 @@ const ActivityPage: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityScope, entityTypeText, eventTypeFilter, status, from, to, limit]);
+
+  // Reset scope if the selected product is disabled
+  useEffect(() => {
+    if (activityScope === 'vps' && !vpsEnabled) setActivityScope('all');
+  }, [activityScope, vpsEnabled]);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= pagination.totalPages) {
@@ -281,9 +289,8 @@ const ActivityPage: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All activity</SelectItem>
-                    <SelectItem value="vps">VPS</SelectItem>
+                    {vpsEnabled && <SelectItem value="vps">VPS</SelectItem>}
                     {hostingEnabled && <SelectItem value="hosting">Web hosting</SelectItem>}
-                    {hostingEnabled && <SelectItem value="enhance">Enhance platform</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -381,10 +388,40 @@ const ActivityPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  <span className="text-muted-foreground">Loading activities...</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="rounded-md border">
+                  <div className="bg-muted/30 border-b border-border">
+                    <div className="flex items-center px-6 py-3">
+                      <Skeleton className="h-3 w-24 mr-16" />
+                      <Skeleton className="h-3 w-20 mr-12" />
+                      <Skeleton className="h-3 w-16 mr-8" />
+                      <Skeleton className="h-3 w-28 mr-8" />
+                      <Skeleton className="h-3 w-48 mr-8" />
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                  </div>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center px-6 py-4 border-b border-border last:border-0">
+                      <Skeleton className="h-3 w-36 mr-16" />
+                      <Skeleton className="h-3 w-28 mr-12" />
+                      <Skeleton className="h-5 w-16 mr-8" />
+                      <Skeleton className="h-3 w-32 mr-8" />
+                      <Skeleton className="h-3 w-64 mr-8" />
+                      <Skeleton className="h-5 w-20" />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-32" />
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
                 </div>
               </div>
             ) : activities.length === 0 ? (

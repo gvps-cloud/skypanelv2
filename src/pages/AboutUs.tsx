@@ -25,7 +25,7 @@ import { usePrefersReducedMotion } from "@/components/fx/usePrefersReducedMotion
 import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import api from "@/lib/api";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -152,6 +152,8 @@ export default function AboutUs() {
 
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
 
   const formatStat =
     (value?: number) =>
@@ -159,22 +161,21 @@ export default function AboutUs() {
       ? value.toLocaleString()
       : "N/A";
 
+  const baseStatRows = [
+    { label: "Total users", value: formatStat(stats?.users.total) },
+    ...(vpsEnabled
+      ? [
+          { label: "VPS instances", value: formatStat(stats?.vps.total) },
+          { label: "Active VPS", value: formatStat(stats?.vps.active) },
+        ]
+      : []),
+    { label: "Open tickets", value: formatStat(stats?.support.openTickets) },
+    { label: "Regions", value: formatStat(stats?.regions.total) },
+  ];
+
   const visibleStatRows = hostingEnabled
-    ? [
-        { label: "Total users", value: formatStat(stats?.users.total) },
-        { label: "VPS instances", value: formatStat(stats?.vps.total) },
-        { label: "Active VPS", value: formatStat(stats?.vps.active) },
-        { label: "Open tickets", value: formatStat(stats?.support.openTickets) },
-        { label: "Regions", value: formatStat(stats?.regions.total) },
-        { label: "Active hosting accounts", value: formatStat(stats?.hosting.active) },
-      ]
-    : [
-        { label: "Total users", value: formatStat(stats?.users.total) },
-        { label: "VPS instances", value: formatStat(stats?.vps.total) },
-        { label: "Active VPS", value: formatStat(stats?.vps.active) },
-        { label: "Open tickets", value: formatStat(stats?.support.openTickets) },
-        { label: "Regions", value: formatStat(stats?.regions.total) },
-      ];
+    ? [...baseStatRows, { label: "Active hosting accounts", value: formatStat(stats?.hosting.active) }]
+    : baseStatRows;
 
   return (
     <MarketingPageShell background="aurora">

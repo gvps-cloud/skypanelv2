@@ -46,7 +46,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import PayPalCheckoutDialog from '@/components/billing/PayPalCheckoutDialog';
 import { formatBillingAmount as formatBillingAmountDisplay } from '@/lib/formatters';
-import { useHostingStatus } from '@/hooks/useHosting';
+import { useHostingStatus, useVpsProductStatus } from '@/hooks/useHosting';
+import { Skeleton } from '@/components/ui/skeleton';
 // Navigation provided by AppLayout
 
 interface FilterState {
@@ -64,6 +65,8 @@ interface PaginationState {
 const Billing: React.FC = () => {
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
 
   const navigate = useNavigate();
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -339,7 +342,7 @@ const Billing: React.FC = () => {
 
       await loadOverviewData();
       await Promise.all([
-        loadVPSUptimeData(),
+        ...(vpsEnabled ? [loadVPSUptimeData()] : []),
         loadBillingSummary()
       ]);
     } catch (error) {
@@ -682,16 +685,14 @@ const Billing: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 font-mono">
         <div className="rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
           <div className="mb-2">
-            <Badge variant="secondary" className="mb-3">
-              Billing
-            </Badge>
+            <Skeleton className="h-5 w-16 rounded-sm" />
           </div>
           <div className="space-y-3">
-            <div className="h-10 w-3/4 bg-muted animate-pulse rounded" />
-            <div className="h-5 w-2/3 bg-muted animate-pulse rounded" />
+            <Skeleton className="h-10 w-3/4" />
+            <Skeleton className="h-5 w-2/3" />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -700,11 +701,11 @@ const Billing: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2 flex-1 min-w-0">
-                    <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                    <div className="h-7 w-28 bg-muted animate-pulse rounded" />
-                    <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-7 w-28" />
+                    <Skeleton className="h-3 w-40" />
                   </div>
-                  <div className="h-12 w-12 bg-muted animate-pulse rounded-lg" />
+                  <Skeleton className="h-12 w-12 rounded-lg" />
                 </div>
               </CardContent>
             </Card>
@@ -830,6 +831,7 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
+        {vpsEnabled && (
         <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -855,6 +857,7 @@ const Billing: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Add Funds and Egress Credits Section */}
@@ -1032,6 +1035,7 @@ const Billing: React.FC = () => {
         )}
 
         {/* Buy Egress Credits Card */}
+        {vpsEnabled && (
         <Card className="flex h-full min-h-0 flex-col border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Buy Egress Credits</CardTitle>
@@ -1061,6 +1065,7 @@ const Billing: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
 
       <PayPalCheckoutDialog
@@ -1075,7 +1080,7 @@ const Billing: React.FC = () => {
       />
 
       {/* VPS Uptime Summary Section — only when org has VPS instances */}
-      {vpsUptimeData && vpsUptimeData.vpsInstances.length > 0 && (
+      {vpsEnabled && vpsUptimeData && vpsUptimeData.vpsInstances.length > 0 && (
         <Card className="mb-8 border-primary/25">
           <CardHeader>
             <div className="flex items-center justify-between">

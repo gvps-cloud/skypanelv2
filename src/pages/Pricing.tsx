@@ -15,7 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Loader2,
   Check,
   Cpu,
   HardDrive,
@@ -40,6 +39,7 @@ import { MarketingHero } from '@/components/marketing/MarketingHero';
 import DataStreamCanvas from '@/components/home/DataStreamCanvas';
 import { usePrefersReducedMotion } from '@/components/fx/usePrefersReducedMotion';
 import { AsciiBox } from '@/components/fx/AsciiBox';
+import { Skeleton } from '@/components/ui/skeleton';
 import { apiClient } from '@/lib/api';
 import { getHostingFeatureRows, getHostingFeatureSpecRows } from '@/lib/hostingPlanFeatures';
 import type { HostingPlan } from '@/hooks/useHosting';
@@ -431,11 +431,32 @@ const PricingPage: React.FC = () => {
   if (loading) {
     return (
       <MarketingPageShell background="aurora">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex min-h-[400px] items-center justify-center">
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span>Loading pricing information...</span>
+        <div className="container mx-auto px-4 py-8 space-y-8">
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="rounded-xl border bg-card p-6 space-y-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl border bg-card p-6">
+                  <Skeleton className="h-4 w-20 mb-4" />
+                  <Skeleton className="h-8 w-36 mb-2" />
+                  <Skeleton className="h-3 w-full mb-1" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              ))}
             </div>
           </div>
         </div>

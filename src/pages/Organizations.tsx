@@ -55,7 +55,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TeamSettings from "@/components/settings/TeamSettings";
 import { OrganizationResourceTables } from "@/components/organizations/OrganizationResourceTables";
 import { OrganizationNotesSection } from "@/components/notes/OrganizationNotesSection";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 
 interface ViewMode {
   type: "all" | "organization";
@@ -74,6 +74,8 @@ const HOSTING_SUBSCRIPTIONS_PAGE_SIZE = 6;
 const Organizations: React.FC = () => {
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
   const [organizations, setOrganizations] = useState<OrganizationWithStats[]>([]);
   const [organizationResources, setOrganizationResources] = useState<
     OrganizationResources[]
@@ -241,7 +243,7 @@ const Organizations: React.FC = () => {
   }, [loadOrganizationResources]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !vpsEnabled) return;
 
     let cancelled = false;
 
@@ -388,12 +390,14 @@ const Organizations: React.FC = () => {
 
   useEffect(() => {
     if (selectedOrganization?.id) {
-      loadEgressOverview(selectedOrganization.id);
-      loadEgressCredits(selectedOrganization.id);
-      loadCreditPacks(selectedOrganization.id);
+      if (vpsEnabled) {
+        loadEgressOverview(selectedOrganization.id);
+        loadEgressCredits(selectedOrganization.id);
+        loadCreditPacks(selectedOrganization.id);
+      }
       loadBillingSummary();
     }
-  }, [selectedOrganization?.id, loadEgressOverview, loadEgressCredits, loadCreditPacks, loadBillingSummary]);
+  }, [selectedOrganization?.id, vpsEnabled, loadEgressOverview, loadEgressCredits, loadCreditPacks, loadBillingSummary]);
 
   const handleOrganizationUpdated = useCallback(async () => {
     await Promise.all([
@@ -542,24 +546,28 @@ const Organizations: React.FC = () => {
                 description: "Active memberships",
                 icon: <Building2 className="h-6 w-6" />,
               },
-              {
-                label: "VPS Instances",
-                value: totalStats.vpsInstances,
-                description: "Across all organizations",
-                icon: <Server className="h-6 w-6" />,
-              },
+              ...(vpsEnabled
+                ? [{
+                    label: "VPS Instances",
+                    value: totalStats.vpsInstances,
+                    description: "Across all organizations",
+                    icon: <Server className="h-6 w-6" />,
+                  }]
+                : []),
               {
                 label: "Support Tickets",
                 value: totalStats.tickets,
                 description: "Open and active tickets",
                 icon: <Ticket className="h-6 w-6" />,
               },
-              {
-                label: "SSH Keys",
-                value: totalStats.sshKeys,
-                description: "Shared across organizations",
-                icon: <Key className="h-6 w-6" />,
-              },
+              ...(vpsEnabled
+                ? [{
+                    label: "SSH Keys",
+                    value: totalStats.sshKeys,
+                    description: "Shared across organizations",
+                    icon: <Key className="h-6 w-6" />,
+                  }]
+                : []),
               ...(hostingEnabled
                 ? [{
                     label: "Web Hosting",
@@ -659,10 +667,12 @@ const Organizations: React.FC = () => {
                             </div>
 
                             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                              {vpsEnabled && (
                               <div className="flex items-center gap-1">
                                 <Server className="h-3 w-3" />
                                 {org.stats.vps_count} VPS
                               </div>
+                              )}
                               <div className="flex items-center gap-1">
                                 <Ticket className="h-3 w-3" />
                                 {org.stats.ticket_count} tickets
@@ -782,8 +792,10 @@ const Organizations: React.FC = () => {
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {selectedOrgFilter !== "all"
-                      ? "This organization has no VPS instances, SSH keys, or tickets yet"
-                      : "No VPS instances, SSH keys, or tickets across your organizations"}
+                      ? "This organization has no resources yet"
+                      : vpsEnabled
+                        ? "No VPS instances, SSH keys, or tickets across your organizations"
+                        : "No SSH keys or tickets across your organizations"}
                   </p>
                 </div>
               ) : (
@@ -805,10 +817,12 @@ const Organizations: React.FC = () => {
                                 <Ticket className="h-3 w-3" />
                                 {resourceGroup.tickets.length} tickets
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Key className="h-3 w-3" />
-                                {resourceGroup.ssh_keys.length} SSH keys
-                              </div>
+                              {vpsEnabled && (
+                                <div className="flex items-center gap-1">
+                                  <Key className="h-3 w-3" />
+                                  {resourceGroup.ssh_keys.length} SSH keys
+                                </div>
+                              )}
                               {hostingEnabled && (
                                 <div className="flex items-center gap-1">
                                   <Globe2 className="h-3 w-3" />
@@ -828,7 +842,7 @@ const Organizations: React.FC = () => {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {resourceGroup.permissions.vps_view &&
+                        {vpsEnabled && resourceGroup.permissions.vps_view &&
                           resourceGroup.vps_instances.length > 0 && (
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
@@ -1223,25 +1237,29 @@ const Organizations: React.FC = () => {
                     <Users className="mr-1 h-3 w-3" />
                     {selectedOrganization.stats.member_count} members
                   </Badge>
+                  {vpsEnabled && (
                   <Badge variant="outline">
                     <Server className="mr-1 h-3 w-3" />
                     {selectedOrganization.stats.vps_count} VPS instances
                   </Badge>
+                  )}
                   <Badge variant="outline">
                     <Ticket className="mr-1 h-3 w-3" />
                     {selectedOrganization.stats.ticket_count} tickets
                   </Badge>
-                  <Badge variant="outline">
-                    <Key className="mr-1 h-3 w-3" />
-                    {selectedOrganization.stats.ssh_key_count} SSH keys
-                  </Badge>
+                  {vpsEnabled && (
+                    <Badge variant="outline">
+                      <Key className="mr-1 h-3 w-3" />
+                      {selectedOrganization.stats.ssh_key_count} SSH keys
+                    </Badge>
+                  )}
                   {hostingEnabled && (
                     <Badge variant="outline">
                       <Globe2 className="mr-1 h-3 w-3" />
                       {selectedOrganization.stats.hosting_count || 0} hosting
                     </Badge>
                   )}
-                  {egressOverview && (
+                  {vpsEnabled && egressOverview && (
                     <>
                       <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                         Egress: {egressCredits?.creditsGb.toFixed(2) ?? '0.00'} GB
@@ -1281,7 +1299,7 @@ const Organizations: React.FC = () => {
             <TabsList className="mb-4">
               <TabsTrigger value="resources">Resources</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
-              <TabsTrigger value="egress">Egress</TabsTrigger>
+              {vpsEnabled && <TabsTrigger value="egress">Egress</TabsTrigger>}
               <TabsTrigger value="settings">Team Settings</TabsTrigger>
             </TabsList>
 
@@ -1322,6 +1340,7 @@ const Organizations: React.FC = () => {
                     handleOpenOrganizationTicket(selectedOrganization.id, ticketId)
                   }
                   hostingEnabled={hostingEnabled}
+                  vpsEnabled={vpsEnabled}
                 />
               ) : (
                 <div className="text-center py-8 text-sm text-muted-foreground">
@@ -1337,6 +1356,7 @@ const Organizations: React.FC = () => {
               />
             </TabsContent>
 
+            {vpsEnabled && (
             <TabsContent value="egress" className="space-y-6">
               <Card className="border-primary/25">
                 <CardHeader>
@@ -1612,6 +1632,7 @@ const Organizations: React.FC = () => {
                 </Card>
               )}
             </TabsContent>
+            )}
 
             <TabsContent value="settings">
               <TeamSettings

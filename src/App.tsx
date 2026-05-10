@@ -433,7 +433,9 @@ function AppRoutes() {
           path="/ssh-keys"
           element={
             <ProtectedRoute>
-              <SSHKeys />
+              <VpsEnabledRoute>
+                <SSHKeys />
+              </VpsEnabledRoute>
             </ProtectedRoute>
           }
         />

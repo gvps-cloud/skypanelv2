@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TerminalPageHeader, TerminalPanel } from "@/components/terminal";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -2284,12 +2285,45 @@ const VPS: React.FC = () => {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading VPS instances...</p>
+      <TerminalPanel title="INSTANCES" bodyClassName="p-4 md:p-6">
+        <div className="space-y-6 font-mono">
+          <TerminalPageHeader pathPrefix="~/vps" command="instances --list" />
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <Skeleton className="h-5 w-20 rounded-sm" />
+              <Skeleton className="h-9 w-48" />
+              <Skeleton className="h-4 w-72" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+          <Card className="border-primary/25">
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-5 w-16 rounded-sm" />
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      </TerminalPanel>
     );
   }
 

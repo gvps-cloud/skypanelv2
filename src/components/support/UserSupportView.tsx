@@ -36,6 +36,7 @@ import { CreateTicketDialog, CreateTicketData } from "./shared/CreateTicketDialo
 import { TicketInfoSidebar } from "./shared/TicketInfoSidebar";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useVpsProductStatus, useHostingStatus } from "@/hooks/useHosting";
 
 interface PrefilledTicketData {
   subject?: string;
@@ -64,6 +65,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   hideTicketListHeading,
 }) => {
   const { user } = useAuth();
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const { data: hostingStatus } = useHostingStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
+  const hostingEnabled = hostingStatus?.enabled === true;
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
@@ -140,10 +145,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
 
   useEffect(() => {
     if (isCreateModalOpen) {
-      fetchVpsInstances();
-      fetchHostingServices();
+      if (vpsEnabled) fetchVpsInstances();
+      if (hostingEnabled) fetchHostingServices();
     }
-  }, [isCreateModalOpen, fetchVpsInstances, fetchHostingServices]);
+  }, [isCreateModalOpen, vpsEnabled, hostingEnabled, fetchVpsInstances, fetchHostingServices]);
 
   useEffect(() => {
     if (!pendingCreateTicket) {
@@ -786,6 +791,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         onSubmit={handleCreateTicket}
         vpsInstances={vpsInstances}
         hostingServices={hostingServices}
+        vpsEnabled={vpsEnabled}
+        hostingEnabled={hostingEnabled}
         prefilled={prefilledTicket ? {
           subject: prefilledTicket.subject,
           description: prefilledTicket.description,

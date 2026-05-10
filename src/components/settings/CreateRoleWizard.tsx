@@ -28,7 +28,7 @@ import {
   Wifi,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 
 interface OrganizationRole {
   id: string;
@@ -154,14 +154,22 @@ const PERMISSIONS: Permission[] = [
 export default function CreateRoleWizard({ isOpen, onClose, onSave, editingRole, loading }: CreateRoleWizardProps) {
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
 
-  const visibleCategories = hostingEnabled
-    ? PERMISSION_CATEGORIES
-    : PERMISSION_CATEGORIES.filter((cat) => cat.id !== "hosting");
+  const VPS_CATEGORIES = new Set(["vps", "ssh", "egress"]);
 
-  const visiblePermissions = hostingEnabled
-    ? PERMISSIONS
-    : PERMISSIONS.filter((perm) => perm.category !== "hosting");
+  const visibleCategories = PERMISSION_CATEGORIES.filter((cat) => {
+    if (!hostingEnabled && cat.id === "hosting") return false;
+    if (!vpsEnabled && VPS_CATEGORIES.has(cat.id)) return false;
+    return true;
+  });
+
+  const visiblePermissions = PERMISSIONS.filter((perm) => {
+    if (!hostingEnabled && perm.category === "hosting") return false;
+    if (!vpsEnabled && VPS_CATEGORIES.has(perm.category)) return false;
+    return true;
+  });
 
   const [roleName, setRoleName] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);

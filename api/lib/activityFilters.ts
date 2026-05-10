@@ -11,12 +11,11 @@ export function normalizeActivityTypeInput(raw: string): string {
 const HOSTING_ALIASES = new Set([
   "hosting",
   "web_hosting",
+  "enhance",
   "enhance_web_hosting",
   "hosting_subscription",
   "hosting_wallet",
 ]);
-
-const ENHANCE_ALIASES = new Set(["enhance"]);
 
 /**
  * Append an entity/category filter clause and bound values.
@@ -38,18 +37,10 @@ export function appendActivityEntityTypeFilter(opts: {
 
   if (HOSTING_ALIASES.has(norm)) {
     opts.clauses.push(
-      `(entity_type IN ('hosting_subscription', 'hosting_wallet') OR event_type LIKE $${p} OR event_type LIKE $${p + 1})`,
+      `(entity_type IN ('hosting_subscription', 'hosting_wallet') OR event_type LIKE $${p} OR event_type LIKE $${p + 1} OR event_type LIKE $${p + 2} OR (entity_type = $${p + 3} AND entity_id = $${p + 4}))`,
     );
-    opts.params.push("hosting.%", "billing.hosting_wallet.%");
-    return p + 2;
-  }
-
-  if (ENHANCE_ALIASES.has(norm)) {
-    opts.clauses.push(
-      `(event_type LIKE $${p} OR (entity_type = $${p + 1} AND entity_id = $${p + 2}))`,
-    );
-    opts.params.push("enhance.%", "platform_integration", "enhance");
-    return p + 3;
+    opts.params.push("hosting.%", "billing.hosting_wallet.%", "enhance.%", "platform_integration", "enhance");
+    return p + 5;
   }
 
   opts.clauses.push(`entity_type = $${p}`);

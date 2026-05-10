@@ -48,6 +48,8 @@ interface CreateTicketDialogProps {
   onSubmit: (data: CreateTicketData) => Promise<void>;
   vpsInstances?: Array<{ id: string; label: string }>;
   hostingServices?: Array<{ id: string; label: string }>;
+  vpsEnabled?: boolean;
+  hostingEnabled?: boolean;
   isLoading?: boolean;
   prefilled?: {
     subject?: string;
@@ -66,11 +68,31 @@ export interface CreateTicketData {
   hostingSubscriptionId?: string;
 }
 
-const STEPS = [
+const BASE_STEPS = [
   { id: "details", label: "Issue Details", description: "Define the request" },
   { id: "service", label: "Service Context", description: "Attach VPS or hosting" },
   { id: "review", label: "Review & Send", description: "Add final detail" },
 ] as const;
+
+function buildSteps(hasVps: boolean, hasHosting: boolean) {
+  if (!hasVps && !hasHosting) {
+    return [
+      BASE_STEPS[0],
+      { ...BASE_STEPS[2], id: "review" as const },
+    ];
+  }
+  const serviceDesc =
+    hasVps && hasHosting
+      ? "Attach VPS or hosting"
+      : hasVps
+        ? "Attach a VPS"
+        : "Attach hosting";
+  return [
+    BASE_STEPS[0],
+    { ...BASE_STEPS[1], description: serviceDesc },
+    BASE_STEPS[2],
+  ];
+}
 
 const CATEGORY_OPTIONS: Array<{ value: TicketCategory; label: string; description: string }> = [
   { value: "general", label: "General Inquiry", description: "Questions, guidance, or account help." },
@@ -107,6 +129,8 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
   onSubmit,
   vpsInstances = [],
   hostingServices = [],
+  vpsEnabled = true,
+  hostingEnabled = true,
   isLoading = false,
   prefilled,
 }) => {
@@ -130,6 +154,13 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
   const busy = isLoading || submitting;
   const subjectReady = data.subject.trim().length >= MIN_SUBJECT_LENGTH;
   const descriptionReady = data.description.trim().length >= MIN_DESCRIPTION_LENGTH;
+
+  const hasVps = vpsEnabled && vpsInstances.length > 0;
+  const hasHosting = hostingEnabled && hostingServices.length > 0;
+  const showVps = vpsEnabled;
+  const showHosting = hostingEnabled;
+  const steps = useMemo(() => buildSteps(showVps, showHosting), [showVps, showHosting]);
+  const hasServiceStep = steps.length === 3;
 
   const filteredServices = useMemo(() => {
     const query = serviceSearch.trim().toLowerCase();
@@ -224,7 +255,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
 
   const nextStep = () => {
     if (currentStep === 0 && !subjectReady) return;
-    setCurrentStep((step) => Math.min(step + 1, STEPS.length - 1));
+    setCurrentStep((step) => Math.min(step + 1, steps.length - 1));
   };
 
   const previousStep = () => {
@@ -274,7 +305,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
-              {STEPS.map((step, index) => {
+              {steps.map((step, index) => {
                 const isActive = index === currentStep;
                 const isComplete = index < currentStep;
 
@@ -426,20 +457,22 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                 </div>
               )}
 
-              {currentStep === 1 && (
+              {hasServiceStep && currentStep === 1 && (
                 <div className="space-y-8 rounded-2xl border border-border/70 bg-card/80 p-5 shadow-sm">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <Server className="h-4 w-4 text-primary" />
-                      VPS (optional)
+                  {showVps && (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Server className="h-4 w-4 text-primary" />
+                        VPS (optional)
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Link a VPS if the request is tied to a specific server. You can search
+                        large lists with pagination.
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Link a VPS if the request is tied to a specific server. You can search
-                      large lists with pagination.
-                    </p>
-                  </div>
 
-                  {vpsInstances.length > 0 ? (
+                    {vpsInstances.length > 0 ? (
                     <div className="space-y-4">
                       <Popover
                         modal={false}
@@ -554,8 +587,12 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                       No VPS instances are currently available to attach.
                     </div>
                   )}
+                  </>
+                  )}
 
-                  <div className="space-y-2 border-t border-border/60 pt-6">
+                  {showHosting && (
+                  <>
+                  <div className={`space-y-2 ${showVps ? "border-t border-border/60 pt-6" : ""}`}>
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <Globe className="h-4 w-4 text-primary" />
                       Enhance hosting (optional)
@@ -691,10 +728,12 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                       or none exist yet).
                     </div>
                   )}
+                  </>
+                  )}
                 </div>
               )}
 
-              {currentStep === 2 && (
+              {(hasServiceStep ? currentStep === 2 : currentStep === 1) && (
                 <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="space-y-3 rounded-2xl border border-border/70 bg-card/80 p-5 shadow-sm">
                     <Label htmlFor="description" className="text-sm font-medium">
@@ -750,23 +789,27 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                         </div>
                       </div>
 
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Related VPS
-                        </p>
-                        <p className="mt-1 text-foreground">
-                          {selectedService?.label || "None"}
-                        </p>
-                      </div>
+                      {showVps && (
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Related VPS
+                          </p>
+                          <p className="mt-1 text-foreground">
+                            {selectedService?.label || "None"}
+                          </p>
+                        </div>
+                      )}
 
-                      <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Related hosting
-                        </p>
-                        <p className="mt-1 text-foreground">
-                          {selectedHostingService?.label || "None"}
-                        </p>
-                      </div>
+                      {showHosting && (
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Related hosting
+                          </p>
+                          <p className="mt-1 text-foreground">
+                            {selectedHostingService?.label || "None"}
+                          </p>
+                        </div>
+                      )}
 
                       <div>
                         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -782,7 +825,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
 
             <DialogFooter className="gap-2 border-t border-border/60 px-6 py-4 sm:justify-between sm:px-8">
               <div className="text-xs text-muted-foreground">
-                Step {currentStep + 1} of {STEPS.length}
+                Step {currentStep + 1} of {steps.length}
               </div>
 
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -802,7 +845,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                   </Button>
                 )}
 
-                {currentStep < STEPS.length - 1 ? (
+                {currentStep < steps.length - 1 ? (
                   <Button
                     type="button"
                     onClick={nextStep}

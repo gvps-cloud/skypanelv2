@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import Pagination from "@/components/ui/Pagination";
 import {
   Select,
@@ -191,13 +192,13 @@ export default function Blog() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-sm border border-primary/25 bg-card shadow-none animate-pulse"
+                  className="rounded-sm border border-primary/25 bg-card shadow-none"
                 >
-                  <div className="h-48 bg-muted rounded-t-sm border-b border-border" />
+                  <Skeleton className="h-48 rounded-t-sm border-b border-border" />
                   <div className="p-5 space-y-3">
-                    <div className="h-4 bg-muted rounded-sm w-3/4" />
-                    <div className="h-3 bg-muted rounded-sm w-full" />
-                    <div className="h-3 bg-muted rounded-sm w-2/3" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-2/3" />
                   </div>
                 </div>
               ))}
