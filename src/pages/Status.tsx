@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, type Variants } from "framer-motion";
 import {
   AlertTriangle,
@@ -39,6 +39,7 @@ import { StatusHeartbeat } from "@/components/fx/StatusHeartbeat";
 import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import { VPSInfrastructureCard } from "@/components/VPSInfrastructureCard";
+import { useVpsProductStatus } from "@/hooks/useHosting";
 
 /* ─── Animation Variants ─────────────────────────────────────────── */
 
@@ -129,9 +130,13 @@ interface BetterStackStatusReport {
   statusUpdates: BetterStackStatusUpdate[];
 }
 
+const VPS_MONITOR_NAME_PATTERN = /\b(vps|linode|compute|server|ssh|egress)\b/i;
+
 /* ─── Component ──────────────────────────────────────────────────── */
 
 export default function Status() {
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
   const [services, setServices] = useState<ServiceComponent[]>([]);
   const [activeIncidents, setActiveIncidents] = useState<Incident[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>(() =>
@@ -157,6 +162,11 @@ export default function Status() {
   const [bsStale, setBsStale] = useState(false);
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+
+  const visibleServices = useMemo(() => {
+    if (vpsEnabled) return services;
+    return services.filter((service) => !VPS_MONITOR_NAME_PATTERN.test(service.name));
+  }, [services, vpsEnabled]);
 
   const fetchLiveData = async () => {
     try {
@@ -323,7 +333,11 @@ export default function Status() {
                   </Badge>
                 }
                 title={`${BRAND_NAME} status`}
-                subtitle="Real-time availability for VPS, networking, and supporting systems. Data refreshes automatically every few minutes and whenever you request an update."
+                subtitle={
+                  vpsEnabled
+                    ? "Real-time availability for VPS, networking, and supporting systems. Data refreshes automatically every few minutes and whenever you request an update."
+                    : "Real-time availability for networking and supporting systems. Data refreshes automatically every few minutes and whenever you request an update."
+                }
               />
 
               <div className="flex flex-wrap items-center gap-4">
@@ -763,7 +777,7 @@ export default function Status() {
                   <Card className="home-feature-card shadow-sm border-primary/25">
                     <CardContent className="divide-y">
                       {/* VPS Infrastructure */}
-                      <VPSInfrastructureCard />
+                      {vpsEnabled && <VPSInfrastructureCard />}
 
                       {isLoading ? (
                         <div className="flex items-center justify-center py-12">
@@ -775,7 +789,7 @@ export default function Status() {
                           </div>
                         </div>
                       ) : (
-                        services.map((service, idx) => (
+                        visibleServices.map((service, idx) => (
                           <div
                             key={`${service.name}-${idx}`}
                             className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between"
@@ -871,21 +885,23 @@ export default function Status() {
                     <Badge variant="outline">Target uptime guarantees</Badge>
                   </div>
                   <div className="grid gap-6 md:grid-cols-3">
-                    <Card className="home-feature-card border-primary/25">
-                      <CardHeader>
-                        <CardTitle className="text-base">
-                          VPS Infrastructure
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="text-3xl font-semibold text-green-600 dark:text-green-400">
-                          99.9%
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Target uptime for compute resources
-                        </p>
-                      </CardContent>
-                    </Card>
+                    {vpsEnabled && (
+                      <Card className="home-feature-card border-primary/25">
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            VPS Infrastructure
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="text-3xl font-semibold text-green-600 dark:text-green-400">
+                            99.9%
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Target uptime for compute resources
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
                     <Card className="home-feature-card border-primary/25">
                       <CardHeader>
                         <CardTitle className="text-base">

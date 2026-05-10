@@ -24,6 +24,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
+import { useVpsProductStatus } from "@/hooks/useHosting";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 import ActivityFeed from "@/components/ActivityFeed";
@@ -58,6 +59,9 @@ const Navigation: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsProductStatus?.enabled === true;
+  const visibleNavigationItems = navigationItems.filter((item) => item.name !== "VPS" || vpsEnabled);
 
   const handleLogout = async () => {
     try {
@@ -80,7 +84,7 @@ const Navigation: React.FC = () => {
             {BRAND_NAME}
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            {navigationItems.map((item) => {
+            {visibleNavigationItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
@@ -231,7 +235,7 @@ const Navigation: React.FC = () => {
                   </div>
                 </div>
                 <nav className="space-y-1">
-                  {navigationItems.map((item) => {
+                  {visibleNavigationItems.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.href);
                     return (

@@ -19,7 +19,7 @@ const sections = [
     content: (
       <>
         <p>
-          {BRAND_NAME} ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use our cloud infrastructure and web hosting platform.
+          {BRAND_NAME} ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use our cloud platform.
         </p>
         <p>
           By accessing the Service, you consent to the practices described here. If you disagree with any part of this policy, please discontinue use of the Service.
@@ -36,7 +36,7 @@ const sections = [
         <p><strong>2.2 Technical information:</strong> We gather IP address, device details, operating system, browser type, and logs such as access times and pages viewed. Cookies and similar technologies help us personalize sessions.</p>
         <p><strong>2.3 Usage information:</strong> Resource metrics (CPU, memory, bandwidth), API requests, feature usage patterns, and support interactions help us improve the platform.</p>
         <p><strong>2.4 Customer data:</strong> Content you store or process using the Service remains yours. We access it only to provide the Service or comply with legal obligations.</p>
-        <p><strong>2.5 Hosting data:</strong> Domain names, website storage and bandwidth usage, email mailbox metadata (not email content), database metadata, and hosting subscription details.</p>
+        <p><strong>2.5 Product data:</strong> Domain names, storage and bandwidth usage, account metadata, database metadata, and subscription details for enabled products.</p>
         <p><strong>2.6 Fraud prevention data:</strong> IP address analysis, VPN/proxy/Tor detection results, and fraud risk scores used for account and transaction screening.</p>
       </>
     ),
@@ -49,7 +49,7 @@ const sections = [
         <p>We use collected information to:</p>
         <ul className="space-y-2 pl-6">
           <li>Provide, maintain, and enhance the Service</li>
-          <li>Provision and manage web hosting services (websites, email, DNS, SSL, databases)</li>
+          <li>Provision and manage enabled product services and related resources</li>
           <li>Process transactions and manage your account</li>
           <li>Send technical notices, security alerts, and administrative messages</li>
           <li>Respond to support requests and improve customer experience</li>
@@ -67,7 +67,7 @@ const sections = [
     content: (
       <>
         <p>We share data only when necessary:</p>
-        <p><strong>4.1 Service providers:</strong> Infrastructure providers, web hosting control panel software providers, payment processors, email delivery services, fraud prevention services, monitoring services, and analytics vendors operate on our behalf under strict data processing agreements.</p>
+        <p><strong>4.1 Service providers:</strong> Infrastructure providers, product control panel software providers, payment processors, email delivery services, fraud prevention services, monitoring services, and analytics vendors operate on our behalf under strict data processing agreements.</p>
         <p><strong>4.2 Legal obligations:</strong> We may disclose information to comply with laws, regulations, or lawful requests by public authorities, including DMCA takedown notices.</p>
         <p><strong>4.3 Business transfers:</strong> If we merge, acquire, or sell assets, data may be transferred subject to this policy.</p>
         <p><strong>4.4 With consent:</strong> We share information for other purposes only when you explicitly authorize it.</p>
@@ -82,8 +82,8 @@ const sections = [
         <p>We implement technical and organizational safeguards such as:</p>
         <ul className="space-y-2 pl-6">
           <li>TLS encryption for data in transit and encryption for sensitive data at rest</li>
-          <li>Per-website containerization for hosting isolation</li>
-          <li>Web Application Firewall (ModSecurity with OWASP ruleset) for hosted websites</li>
+          <li>Product-specific isolation controls where applicable</li>
+          <li>Application firewall protections where applicable</li>
           <li>Automated brute force protection and rate limiting on authentication endpoints</li>
           <li>Role-based access controls and multi-factor authentication for internal tools</li>
           <li>Regular penetration tests, vulnerability scanning, and third-party audits</li>
@@ -94,15 +94,15 @@ const sections = [
     ),
   },
   {
-    value: "hosting-data",
-    title: "6. Hosting Data Processing",
+    value: "product-data",
+    title: "6. Product Data Processing",
     content: (
       <>
-        <p><strong>6.1 Data ownership:</strong> You retain full ownership and control of all website content, email messages, database data, and files uploaded to the hosting platform.</p>
-        <p><strong>6.2 Controller and processor:</strong> {BRAND_NAME} acts as data controller. Hosting infrastructure sub-processors (including control panel software providers) process customer data solely to deliver the Service under data processing agreements.</p>
-        <p><strong>6.3 Data access:</strong> We do not access, read, or analyze hosted website content, email messages, or database data except: (a) to deliver or improve the Service, (b) to comply with legal obligations or court orders, or (c) to investigate suspected abuse or policy violations.</p>
-        <p><strong>6.4 Data portability:</strong> You may export all hosted data (files, databases, email) at any time through the control panel or by contacting support.</p>
-        <p><strong>6.5 Sub-processors:</strong> A current list of hosting sub-processors is available upon request by contacting privacy@{BRAND_DOMAIN}.</p>
+        <p><strong>6.1 Data ownership:</strong> You retain full ownership and control of all content, messages, database data, and files uploaded to the platform.</p>
+        <p><strong>6.2 Controller and processor:</strong> {BRAND_NAME} acts as data controller. Infrastructure sub-processors and control panel software providers process customer data solely to deliver the Service under data processing agreements.</p>
+        <p><strong>6.3 Data access:</strong> We do not access, read, or analyze customer content, messages, or database data except: (a) to deliver or improve the Service, (b) to comply with legal obligations or court orders, or (c) to investigate suspected abuse or policy violations.</p>
+        <p><strong>6.4 Data portability:</strong> You may export product data at any time through available controls or by contacting support.</p>
+        <p><strong>6.5 Sub-processors:</strong> A current list of sub-processors is available upon request by contacting privacy@{BRAND_DOMAIN}.</p>
       </>
     ),
   },
@@ -114,7 +114,7 @@ const sections = [
         <p>
           We retain personal data for as long as necessary to deliver the Service and fulfill the purposes described in this policy. When you close your account, we delete associated data within 30 days unless retention is required for legal, tax, or accounting reasons.
         </p>
-        <p>Hosting data (website files, email, databases) is retained for the duration of an active subscription and deleted within 30 days after cancellation. Activity and audit logs are retained for 12 months. Fraud screening records are retained for 24 months.</p>
+        <p>Product data is retained for the duration of an active subscription and deleted within 30 days after cancellation unless retention is required by law. Activity and audit logs are retained for 12 months. Fraud screening records are retained for 24 months.</p>
       </>
     ),
   },
@@ -128,11 +128,11 @@ const sections = [
           <li><strong>Access:</strong> Request a copy of personal data we hold.</li>
           <li><strong>Correction:</strong> Update inaccurate or incomplete data.</li>
           <li><strong>Deletion:</strong> Request deletion of your account and associated data.</li>
-          <li><strong>Export:</strong> Download all hosted website data, email, and databases before account closure.</li>
+          <li><strong>Export:</strong> Download product data before account closure.</li>
           <li><strong>Portability:</strong> Receive data in a portable format.</li>
           <li><strong>Opt-out:</strong> Unsubscribe from marketing communications.</li>
           <li><strong>Objection:</strong> Object to certain processing activities.</li>
-          <li><strong>Hosted content deletion:</strong> Request immediate removal of specific hosted content and receive confirmation.</li>
+          <li><strong>Content deletion:</strong> Request immediate removal of specific customer content and receive confirmation.</li>
         </ul>
         <p>Email privacy@{BRAND_DOMAIN} to submit a request. We respond within 30 days.</p>
       </>

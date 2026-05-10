@@ -43,6 +43,7 @@ import { BRAND_NAME } from "@/lib/brand";
 import { TerminalPageHeader } from "@/components/terminal";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 import {
   type SectionDefinition,
   methodStyles,
@@ -112,10 +113,36 @@ export default function ApiDocs() {
   const [userOrgs, setUserOrgs] = useState<Array<{ id: string; name: string }>>([]);
   const [orgsFetchFailed, setOrgsFetchFailed] = useState(false);
 
+  const { data: hostingStatus } = useHostingStatus();
+  const { data: vpsStatus } = useVpsProductStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
+  const vpsEnabled = vpsStatus?.enabled === true;
+
+  const VPS_SECTIONS = new Set([
+    "VPS Provisioning & Lifecycle",
+    "VPS Catalog & Integrations",
+    "VPS Networking",
+    "Organization SSH Keys",
+    "Egress & Network Billing",
+    "Admin Egress Management",
+    "Admin Networking",
+  ]);
+
+  const HOSTING_SECTIONS = new Set(["Enhance Web Hosting"]);
+
   const baseSections = useMemo<SectionDefinition[]>(() => buildBaseSections(apiBase), [apiBase]);
-  const sections = useMemo(
+  const syncedSections = useMemo(
     () => syncSectionsWithActiveRoutes(baseSections, apiBase),
     [baseSections, apiBase],
+  );
+  const sections = useMemo(
+    () =>
+      syncedSections.filter((s) => {
+        if (VPS_SECTIONS.has(s.title) && !vpsEnabled) return false;
+        if (HOSTING_SECTIONS.has(s.title) && !hostingEnabled) return false;
+        return true;
+      }),
+    [syncedSections, vpsEnabled, hostingEnabled],
   );
 
   // Initialize active section

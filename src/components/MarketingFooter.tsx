@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import FooterPartnerLinks from "@/components/FooterPartnerLinks";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 
 const footerSections = [
   {
@@ -39,9 +39,16 @@ export default function MarketingFooter() {
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
 
-  const visibleFooterSections = hostingEnabled ? footerSections : footerSections.map((section) => ({
+  const { data: vpsStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsStatus?.enabled === true;
+
+  const visibleFooterSections = footerSections.map((section) => ({
     ...section,
-    links: section.links.filter((link) => link.label !== "Web Hosting"),
+    links: section.links.filter((link) => {
+      if (link.label === "Web Hosting" && !hostingEnabled) return false;
+      if (link.label === "Regions" && !vpsEnabled) return false;
+      return true;
+    }),
   }));
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });

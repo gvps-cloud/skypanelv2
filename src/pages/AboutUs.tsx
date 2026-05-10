@@ -78,7 +78,7 @@ const values: ValueItem[] = [
   {
     title: "Transparent pricing",
     description:
-      "Simple hourly billing, usage alerts, and no hidden egress buckets.",
+      "Simple usage-based billing, spend alerts, and no hidden usage buckets.",
     icon: Award,
   },
   {
@@ -96,7 +96,7 @@ const values: ValueItem[] = [
   {
     title: "Security by design",
     description:
-      "SSH hardening, audit logs, and policy guards at platform level.",
+      "Access hardening, audit logs, and policy guards at platform level.",
     icon: Target,
   },
 ];
@@ -177,6 +177,12 @@ export default function AboutUs() {
     ? [...baseStatRows, { label: "Active hosting accounts", value: formatStat(stats?.hosting.active) }]
     : baseStatRows;
 
+  const heroSubtitle = vpsEnabled
+    ? `${BRAND_NAME} is built for teams who need cloud speed with trusted governance. Provision VPS, manage egress, and trace spend from one dashboard.`
+    : hostingEnabled
+      ? `${BRAND_NAME} is built for teams who need reliable hosting operations with trusted governance. Manage websites, teams, and spend from one dashboard.`
+      : `${BRAND_NAME} is built for teams who need trusted governance, clear billing, and responsive support from one dashboard.`;
+
   return (
     <MarketingPageShell background="aurora">
         <section className="relative overflow-hidden border-b border-border/40">
@@ -212,7 +218,7 @@ export default function AboutUs() {
                   </Badge>
                 }
                 title="Infrastructure without friction"
-                subtitle={`${BRAND_NAME} is built for teams who need cloud speed with trusted governance. Provision VPS, manage egress, and trace spend from one dashboard.`}
+                subtitle={heroSubtitle}
                 actions={
                   <>
                     <Button size="lg" className="h-12 px-7 home-btn-glow group" asChild>

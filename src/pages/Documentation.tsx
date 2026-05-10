@@ -39,6 +39,7 @@ import type {
 } from "@/types/documentation";
 import ApiReference from "@/components/docs/ApiReference";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 import MarketingPageShell from "@/components/MarketingPageShell";
 import { TerminalPageHeader } from "@/components/terminal";
 
@@ -521,13 +522,38 @@ export default function Documentation() {
     setSearchQuery("");
   }, [location.pathname]);
 
+  const { data: hostingStatus } = useHostingStatus();
+  const { data: vpsStatus } = useVpsProductStatus();
+  const docsHostingEnabled = hostingStatus?.enabled === true;
+  const docsVpsEnabled = vpsStatus?.enabled === true;
+
+  const visibleCategories = useMemo(
+    () =>
+      categories.filter((cat) => {
+        if (
+          (cat.slug === "vps-guide" ||
+            cat.name === "VPS Guide") &&
+          !docsVpsEnabled
+        )
+          return false;
+        if (
+          (cat.slug === "web-hosting" ||
+            cat.name === "Web Hosting") &&
+          !docsHostingEnabled
+        )
+          return false;
+        return true;
+      }),
+    [categories, docsVpsEnabled, docsHostingEnabled],
+  );
+
   // Derived state
   const currentCategory = useMemo(
     () =>
       categorySlug
-        ? categories.find((c) => c.slug === categorySlug)
+        ? visibleCategories.find((c) => c.slug === categorySlug)
         : undefined,
-    [categorySlug, categories],
+    [categorySlug, visibleCategories],
   );
 
   /* ── Render: Index (no category selected) ─────────────────────────────────*/
@@ -540,7 +566,7 @@ export default function Documentation() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {categories.map((cat) => {
+        {visibleCategories.map((cat) => {
           const Icon = getCategoryIcon(cat.icon);
           return (
             <Link
@@ -1165,7 +1191,7 @@ export default function Documentation() {
   /* ── Main layout ──────────────────────────────────────────────────────────*/
 
   const sidebarProps = {
-    categories,
+    categories: visibleCategories,
     categorySlug,
     articleSlug,
     searchQuery,

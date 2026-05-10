@@ -34,33 +34,24 @@ function SkyPanelPreview() {
     if (!vpsProductEnabled && activeView === "Compute") {
       setActiveView("Dashboard");
     }
-  }, [vpsProductEnabled, activeView]);
+    if (!hostingEnabled && activeView === "Web Hosting") {
+      setActiveView("Dashboard");
+    }
+  }, [hostingEnabled, vpsProductEnabled, activeView]);
   const [selectedVps, setSelectedVps] = useState("prod-api-01");
   const [walletBalance, setWalletBalance] = useState(128.4);
-  const [activityFeed, setActivityFeed] = useState(
-    hostingEnabled
-      ? [
-          { message: "VPS prod-api-01 deployed", type: "VPS event", time: "2m ago" },
-          {
-            message: "Wallet topped up $50.00",
-            type: "Billing event",
-            time: "1h ago",
-          },
-          {
-            message: "Hosting renewed: atlas-site.io",
-            type: "System event",
-            time: "3h ago",
-          },
-        ]
-      : [
-          { message: "VPS prod-api-01 deployed", type: "VPS event", time: "2m ago" },
-          {
-            message: "Wallet topped up $50.00",
-            type: "Billing event",
-            time: "1h ago",
-          },
-        ]
-  );
+  const [activityFeed, setActivityFeed] = useState([
+    {
+      message: "Wallet topped up $50.00",
+      type: "Billing event",
+      time: "1h ago",
+    },
+    {
+      message: "Support ticket draft created",
+      type: "Support update",
+      time: "3h ago",
+    },
+  ]);
 
   const vpsFleet = [
     {
@@ -246,9 +237,9 @@ function SkyPanelPreview() {
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => quickActions[0].action()}
+                onClick={() => quickActions[0]?.action()}
                 className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20 transition-colors hover:border-primary/40 hover:text-primary"
-                aria-label="Launch a VPS"
+                aria-label={quickActions[0]?.title ?? "Open quick action"}
               >
                 <Plus className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
@@ -279,20 +270,29 @@ function SkyPanelPreview() {
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />{vpsFleet.length} vps
-                active
-              </span>
+              {vpsProductEnabled && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />{vpsFleet.length} vps
+                  active
+                </span>
+              )}
               {hostingEnabled && (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
                   <Globe2 className="h-3 w-3 text-muted-foreground" />2 hosting
                   active
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
-                <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                Avg CPU 24.3%
-              </span>
+              {vpsProductEnabled ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
+                  <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                  Avg CPU 24.3%
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
+                  <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
+                  Workspace ready
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -318,64 +318,87 @@ function SkyPanelPreview() {
               ))}
             </div>
 
-            <div className="rounded-xl border border-border/50 bg-card/50">
-              <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
-                <div>
-                  <h3 className="text-[13px] font-semibold">VPS Fleet</h3>
-                  <p className="text-[10px] text-muted-foreground">
-                    Live signal across your deployments
-                  </p>
+            {vpsProductEnabled ? (
+              <div className="rounded-xl border border-border/50 bg-card/50">
+                <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
+                  <div>
+                    <h3 className="text-[13px] font-semibold">VPS Fleet</h3>
+                    <p className="text-[10px] text-muted-foreground">
+                      Live signal across your deployments
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-primary">
+                    Manage all
+                    <ArrowUpRight className="h-3 w-3" />
+                  </span>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] text-primary">
-                  Manage all
-                  <ArrowUpRight className="h-3 w-3" />
-                </span>
-              </div>
 
-              <div className="divide-y divide-border/30">
-                {vpsFleet.map((vps) => (
-                  <button
-                    key={vps.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedVps(vps.id);
-                      setActiveView("Compute");
-                    }}
-                    className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/35 ${
-                      selectedVps === vps.id ? "bg-primary/5" : ""
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[12px] font-semibold">
-                          {vps.id}
-                        </span>
-                        <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
-                          {vps.status}
-                        </span>
+                <div className="divide-y divide-border/30">
+                  {vpsFleet.map((vps) => (
+                    <button
+                      key={vps.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedVps(vps.id);
+                        setActiveView("Compute");
+                      }}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/35 ${
+                        selectedVps === vps.id ? "bg-primary/5" : ""
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[12px] font-semibold">
+                            {vps.id}
+                          </span>
+                          <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
+                            {vps.status}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {vps.plan} · {vps.region}
+                        </p>
                       </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {vps.plan} · {vps.region}
-                      </p>
-                    </div>
-                    <div className="w-28 space-y-1">
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-muted-foreground">
-                          CPU ({vps.cpuCount})
-                        </span>
-                        <span className="font-medium">{vps.cpu}%</span>
+                      <div className="w-28 space-y-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-muted-foreground">
+                            CPU ({vps.cpuCount})
+                          </span>
+                          <span className="font-medium">{vps.cpu}%</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${vps.cpu}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${vps.cpu}%` }}
-                        />
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-xl border border-border/50 bg-card/50">
+                <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
+                  <div>
+                    <h3 className="text-[13px] font-semibold">
+                      {hostingEnabled ? "Hosting Activity" : "Workspace Activity"}
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground">
+                      Recent account and support updates
+                    </p>
+                  </div>
+                </div>
+                <div className="divide-y divide-border/30">
+                  {activityFeed.slice(0, 3).map((event, i) => (
+                    <div key={`${event.message}-${i}`} className="px-3 py-2.5 text-[11px]">
+                      <div className="font-medium text-foreground">{event.message}</div>
+                      <div className="text-[10px] text-muted-foreground">{event.type} · {event.time}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid gap-3 lg:grid-cols-2">
               <div className="rounded-xl border border-border/50 bg-card/50 p-3">
@@ -394,7 +417,11 @@ function SkyPanelPreview() {
                 </div>
                 <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
                   <CheckCircle2 className="h-3 w-3 text-primary" />
-                  Ready to deploy infrastructure
+                  {vpsProductEnabled
+                    ? "Ready to deploy infrastructure"
+                    : hostingEnabled
+                      ? "Ready to launch websites"
+                      : "Workspace ready"}
                 </div>
               </div>
 
@@ -403,7 +430,7 @@ function SkyPanelPreview() {
                   <h4 className="text-[12px] font-semibold">
                     {activeView === "Web Hosting"
                       ? "Hosting Services"
-                      : activeView === "Compute"
+                      : vpsProductEnabled && activeView === "Compute"
                         ? "Selected VPS"
                         : "Recent Activity"}
                   </h4>
@@ -447,7 +474,7 @@ function SkyPanelPreview() {
                       </button>
                     ))}
                   </div>
-                ) : activeView === "Compute" ? (
+                ) : vpsProductEnabled && activeView === "Compute" ? (
                   <div className="mt-2 space-y-2 text-[11px]">
                     <div className="rounded-lg border border-border/40 bg-background/40 p-2">
                       <div className="flex items-center justify-between">

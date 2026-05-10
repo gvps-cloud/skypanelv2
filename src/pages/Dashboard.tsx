@@ -462,8 +462,8 @@ const Dashboard: React.FC = () => {
           ))}
         </div>
 
-        {/* VPS / content skeleton */}
-        <TerminalPanel title="VPS FLEET" bodyClassName="p-4">
+        {/* Product content skeleton */}
+        <TerminalPanel title={vpsEnabled ? "VPS FLEET" : hostingEnabled ? "WEB HOSTING" : "WORKSPACE"} bodyClassName="p-4">
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center justify-between rounded-sm border border-border bg-card p-3">
@@ -1073,10 +1073,9 @@ const Dashboard: React.FC = () => {
               </div>
           </TerminalPanel>
         ) : (
-          <TerminalPanel title="COMPUTE" bodyClassName="p-4 md:p-6">
+          <TerminalPanel title="WORKSPACE" bodyClassName="p-4 md:p-6">
             <p className="text-sm text-muted-foreground">
-              VPS hosting is not available on this deployment right now. You can still use billing, support, and other
-              workspace tools.
+              Use billing, support, organizations, notes, and activity tools from this workspace.
             </p>
           </TerminalPanel>
         )}

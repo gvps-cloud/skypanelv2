@@ -6,7 +6,7 @@ import { MatrixRain } from "@/components/fx/MatrixRain";
 import { Logo } from "@/components/Logo";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
-import { useHostingStatus } from "@/hooks/useHosting";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 
 interface NavLinkConfig {
   label: string;
@@ -43,7 +43,14 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
 
-  const visibleNavLinks = hostingEnabled ? navLinks : navLinks.filter((link) => link.label !== "Hosting");
+  const { data: vpsStatus } = useVpsProductStatus();
+  const vpsEnabled = vpsStatus?.enabled === true;
+
+  const visibleNavLinks = navLinks.filter((link) => {
+    if (link.label === "Hosting" && !hostingEnabled) return false;
+    if (link.label === "Regions" && !vpsEnabled) return false;
+    return true;
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});

@@ -125,6 +125,21 @@ const ActivityPage: React.FC = () => {
     if (activityScope === 'vps' && !vpsEnabled) setActivityScope('all');
   }, [activityScope, vpsEnabled]);
 
+  const entityTypePlaceholder = [
+    "user",
+    vpsEnabled ? "vps" : null,
+    hostingEnabled ? "hosting" : null,
+    "ticket",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const eventTypePlaceholder = hostingEnabled
+    ? "e.g. auth.login, hosting.purchase.completed"
+    : vpsEnabled
+      ? "e.g. auth.login, vps.created"
+      : "e.g. auth.login, billing.credited";
+
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= pagination.totalPages) {
       fetchActivities(page);
@@ -300,7 +315,7 @@ const ActivityPage: React.FC = () => {
                   id="entity-type-filter"
                   value={entityTypeText}
                   onChange={e => setEntityTypeText(e.target.value)}
-                  placeholder="e.g. user, vps, hosting"
+                  placeholder={`e.g. ${entityTypePlaceholder}`}
                   autoComplete="off"
                 />
                 <p className="text-xs text-muted-foreground">Same values as the Type column (entity_type).</p>
@@ -311,7 +326,7 @@ const ActivityPage: React.FC = () => {
                   id="event-type-filter"
                   value={eventTypeFilter}
                   onChange={e => setEventTypeFilter(e.target.value)}
-                  placeholder="e.g. auth.login, hosting.purchase.completed"
+                  placeholder={eventTypePlaceholder}
                   autoComplete="off"
                 />
                 <p className="text-xs text-muted-foreground">Same values as the Event column (event_type).</p>

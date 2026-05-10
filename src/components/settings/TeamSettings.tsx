@@ -56,6 +56,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useHostingStatus, useVpsProductStatus } from "@/hooks/useHosting";
 
 interface OrganizationMember {
   id: string;
@@ -98,6 +99,10 @@ export default function TeamSettings({
   onOrganizationUpdated,
 }: TeamSettingsProps = {}) {
   const { user } = useAuth();
+  const { data: hostingStatus } = useHostingStatus();
+  const { data: vpsProductStatus } = useVpsProductStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
+  const vpsEnabled = vpsProductStatus?.enabled === true;
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [roles, setRoles] = useState<OrganizationRole[]>([]);
@@ -403,8 +408,24 @@ export default function TeamSettings({
   };
 
   const getPermissionCount = (permissions: string[]) => {
-    return permissions.length;
+    return permissions.filter((permission) => {
+      if (!hostingEnabled && permission.startsWith("hosting_")) return false;
+      if (!vpsEnabled && (
+        permission.startsWith("vps_") ||
+        permission.startsWith("ssh_keys_") ||
+        permission.startsWith("egress_")
+      )) return false;
+      return true;
+    }).length;
   };
+
+  const visibleRoles = roles.filter((role) => {
+    if (role.is_custom) return true;
+    const roleName = role.name.toLowerCase();
+    if (!hostingEnabled && roleName.includes("hosting")) return false;
+    if (!vpsEnabled && roleName.includes("vps")) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -494,7 +515,7 @@ export default function TeamSettings({
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {roles.map((role) => (
+                          {visibleRoles.map((role) => (
                             <SelectItem key={role.id} value={role.id}>
                               {role.name}
                               {role.is_custom && (
@@ -722,14 +743,14 @@ export default function TeamSettings({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {roles.length === 0 ? (
+                    {visibleRoles.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="h-24 text-center">
                           No roles found. Create a role to get started.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      roles.map((role) => (
+                      visibleRoles.map((role) => (
                         <TableRow key={role.id}>
                           <TableCell className="font-medium">
                             {role.name}
@@ -891,7 +912,7 @@ export default function TeamSettings({
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles
+                  {visibleRoles
                     .filter((role) => {
                       // Find current user's role in the organization
                       const currentUserMember = members.find(

@@ -715,7 +715,13 @@ const Organizations: React.FC = () => {
                 <div>
                   <CardTitle>Cross-Organization Resources</CardTitle>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    View VPS instances, SSH keys, and tickets across your organizations
+                    {vpsEnabled && hostingEnabled
+                      ? "View VPS instances, SSH keys, hosting subscriptions, and tickets across your organizations"
+                      : vpsEnabled
+                        ? "View VPS instances, SSH keys, and tickets across your organizations"
+                        : hostingEnabled
+                          ? "View hosting subscriptions and tickets across your organizations"
+                          : "View tickets across your organizations"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -793,9 +799,13 @@ const Organizations: React.FC = () => {
                   <p className="mt-1 text-sm text-muted-foreground">
                     {selectedOrgFilter !== "all"
                       ? "This organization has no resources yet"
-                      : vpsEnabled
-                        ? "No VPS instances, SSH keys, or tickets across your organizations"
-                        : "No SSH keys or tickets across your organizations"}
+                      : vpsEnabled && hostingEnabled
+                        ? "No VPS instances, SSH keys, hosting subscriptions, or tickets across your organizations"
+                        : vpsEnabled
+                          ? "No VPS instances, SSH keys, or tickets across your organizations"
+                          : hostingEnabled
+                            ? "No hosting subscriptions or tickets across your organizations"
+                            : "No tickets across your organizations"}
                   </p>
                 </div>
               ) : (
@@ -809,10 +819,12 @@ const Organizations: React.FC = () => {
                               {resourceGroup.organization_name}
                             </CardTitle>
                             <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Server className="h-3 w-3" />
-                                {resourceGroup.vps_instances.length} VPS
-                              </div>
+                              {vpsEnabled && (
+                                <div className="flex items-center gap-1">
+                                  <Server className="h-3 w-3" />
+                                  {resourceGroup.vps_instances.length} VPS
+                                </div>
+                              )}
                               <div className="flex items-center gap-1">
                                 <Ticket className="h-3 w-3" />
                                 {resourceGroup.tickets.length} tickets
@@ -997,7 +1009,7 @@ const Organizations: React.FC = () => {
                             </div>
                           )}
 
-                        {resourceGroup.permissions.ssh_keys_view &&
+                        {vpsEnabled && resourceGroup.permissions.ssh_keys_view &&
                           resourceGroup.ssh_keys.length > 0 && (
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
@@ -1226,7 +1238,9 @@ const Organizations: React.FC = () => {
                 </h1>
                 <p className="mt-2 max-w-2xl text-muted-foreground">
                   {selectedOrganization.description ||
-                    "Manage this organization's resources, SSH keys, and team members"}
+                    (vpsEnabled
+                      ? "Manage this organization's resources, SSH keys, and team members"
+                      : "Manage this organization's resources and team members")}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Badge variant={getRoleBadgeVariant(selectedOrganization.member_role)}>

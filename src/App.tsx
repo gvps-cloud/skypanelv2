@@ -579,7 +579,7 @@ function AppRoutes() {
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/status" element={<Status />} />
-        <Route path="/regions" element={<Regions />} />
+        <Route path="/regions" element={<VpsEnabledRoute><Regions /></VpsEnabledRoute>} />
         <Route path="/terms" element={<PublicLayout><TermsOfService /></PublicLayout>} />
         <Route path="/privacy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
         <Route path="/organizations/invitations/:token" element={<AcceptInvitation />} />

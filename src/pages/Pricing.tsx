@@ -63,15 +63,23 @@ const revealItem: Variants = {
 
 /* â”€â”€â”€ Trust Marquee Items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-const trustItems = [
+const baseTrustItems = [
   { icon: Clock, label: '99.9% Uptime' },
-  { icon: Zap, label: 'Hourly Billing' },
+  { icon: Zap, label: 'Transparent Billing' },
   { icon: Shield, label: 'No Lock-in' },
+  { icon: Globe, label: '24/7 Support' },
+];
+
+const vpsTrustItems = [
   { icon: HardDrive, label: 'SSD Storage' },
   { icon: Shield, label: 'DDoS Protection' },
-  { icon: Globe, label: '24/7 Support' },
   { icon: Zap, label: 'Instant Deploy' },
   { icon: Server, label: 'Full Root Access' },
+];
+
+const hostingTrustItems = [
+  { icon: Globe, label: 'Managed Websites' },
+  { icon: Shield, label: 'Secure Control Panel' },
 ];
 
 const DEFAULT_CATEGORY_META: Record<string, { label: string; order: number }> = {
@@ -264,7 +272,7 @@ const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
 
 const PricingPage: React.FC = () => {
   const [vpsPlans, setVpsPlans] = useState<VPSPlan[]>([]);
-  const [vpsProductEnabled, setVpsProductEnabled] = useState(true);
+  const [vpsProductEnabled, setVpsProductEnabled] = useState(false);
   const [hostingEnabled, setHostingEnabled] = useState(false);
   const [hostingPlans, setHostingPlans] = useState<HostingPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -372,6 +380,14 @@ const PricingPage: React.FC = () => {
     if (activeCategory === 'all') return vpsPlans;
     return vpsPlans.filter((p) => (p.type_class || 'standard') === activeCategory);
   }, [vpsPlans, activeCategory]);
+
+  const visibleTrustItems = useMemo(() => {
+    return [
+      ...baseTrustItems,
+      ...(vpsProductEnabled ? vpsTrustItems : []),
+      ...(hostingEnabled ? hostingTrustItems : []),
+    ];
+  }, [hostingEnabled, vpsProductEnabled]);
 
   const formatCurrency = (amount: number | string | null | undefined): string => {
     if (amount == null) {
@@ -500,7 +516,15 @@ const PricingPage: React.FC = () => {
                   </Badge>
                 }
                 title="Simple, predictable pricing"
-                subtitle="Choose from our VPS instances. Pay only for what you use with transparent hourly and monthly billing."
+                subtitle={
+                  vpsProductEnabled && hostingEnabled
+                    ? "Choose from compute and hosting plans. Pay only for what you use with transparent billing."
+                    : vpsProductEnabled
+                      ? "Choose from our VPS instances. Pay only for what you use with transparent hourly and monthly billing."
+                      : hostingEnabled
+                        ? "Choose from managed hosting plans with transparent monthly billing."
+                        : "Review available product catalogs and transparent billing options."
+                }
                 actions={
                   <>
                     <Button size="lg" className="h-12 px-7 home-btn-glow group" asChild>
@@ -519,7 +543,7 @@ const PricingPage: React.FC = () => {
               <div className="relative z-10">
               <div className="max-w-4xl overflow-hidden rounded-sm border border-border/60 bg-background/80 px-4 py-3 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
                 <div className="flex min-w-0 flex-wrap gap-x-5 gap-y-2 text-[11px] sm:text-xs text-muted-foreground">
-                  {trustItems.map(({ icon: Icon, label }) => (
+                  {visibleTrustItems.map(({ icon: Icon, label }) => (
                     <span key={label} className="inline-flex shrink-0 items-center gap-1.5">
                       <Icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
                       {label}
@@ -591,6 +615,7 @@ const PricingPage: React.FC = () => {
                 </div>
               </div>
 
+              {vpsProductEnabled && (
               <TabsContent value="vps" className="mt-0">
 
             {/* VPS Instances header */}
@@ -847,6 +872,7 @@ const PricingPage: React.FC = () => {
               </Card>
             </motion.div>
               </TabsContent>
+              )}
 
               {hostingEnabled && (
                 <TabsContent value="hosting" className="mt-0">
@@ -863,8 +889,10 @@ const PricingPage: React.FC = () => {
           <div className="container mx-auto px-4 py-8">
             <div className="text-center text-sm text-muted-foreground">
               <p>
-                All prices are in USD. VPS instances are billed hourly.
-                {hostingEnabled && ' Hosting plans are monthly subscriptions on GVPS.Cloud-operated servers; Enhance is the control panel used to manage websites, databases, mailboxes, and FTP users.'}
+                {vpsProductEnabled && 'All prices are in USD. VPS instances are billed hourly.'}
+                {vpsProductEnabled && hostingEnabled && ' '}
+                {hostingEnabled && 'Hosting plans are monthly subscriptions on GVPS.Cloud-operated servers; Enhance is the control panel used to manage websites, databases, mailboxes, and FTP users.'}
+                {!vpsProductEnabled && !hostingEnabled && 'Product pricing will appear here when offerings are enabled for this deployment.'}
               </p>
               <p className="mt-2">
                 Questions about pricing? <Link to="/contact" className="text-primary hover:underline">Contact our team</Link>

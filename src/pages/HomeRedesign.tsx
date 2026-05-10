@@ -402,6 +402,8 @@ type SolutionCard = {
   bullets: string[];
   detailNoHosting?: string;
   bulletsNoHosting?: string[];
+  detailNoVps?: string;
+  bulletsNoVps?: string[];
 };
 
 const solutionCards: SolutionCard[] = [
@@ -411,6 +413,9 @@ const solutionCards: SolutionCard[] = [
     detail:
       "Spin up a Linux instance in seconds to test your code, run containers, or host your personal projects.",
     bullets: ["Full root access", "Instant provisioning", "Predictable costs"],
+    detailNoVps:
+      "Create projects, organize collaborators, and manage support from one streamlined control plane.",
+    bulletsNoVps: ["Project workspaces", "Team collaboration", "Predictable costs"],
   },
   {
     icon: Users,
@@ -424,6 +429,8 @@ const solutionCards: SolutionCard[] = [
     ],
     detailNoHosting:
       "Create dedicated workspaces for client projects and VPS resources. Collaborate with your team securely.",
+    detailNoVps:
+      "Create dedicated workspaces for client projects. Collaborate with your team securely.",
     bulletsNoHosting: [
       "Organization workspaces",
       "Role-based access",
@@ -451,6 +458,9 @@ const solutionCards: SolutionCard[] = [
       "DDoS protection options",
       "Automated backups",
     ],
+    detailNoVps:
+      "Coordinate customer-facing projects with reliable account controls and support workflows.",
+    bulletsNoVps: ["99.9% uptime SLA", "Team support workflows", "Centralized billing"],
   },
 ];
 
@@ -517,7 +527,7 @@ export default function HomeRedesign() {
   const [hostingLowestPrice, setHostingLowestPrice] = useState<number | null>(null);
   const [hostingCheapestPlan, setHostingCheapestPlan] = useState<any | null>(null);
   const [vpsCheapestPlan, setVpsCheapestPlan] = useState<any | null>(null);
-  const [vpsProductEnabled, setVpsProductEnabled] = useState(true);
+  const [vpsProductEnabled, setVpsProductEnabled] = useState(false);
   const [heroReducedMotion, setHeroReducedMotion] = useState(false);
 
   // Filter hosting/VPS-related content based on enabled state
@@ -529,7 +539,20 @@ export default function HomeRedesign() {
     if (!vpsProductEnabled) {
       cards = cards.filter((card) => card.label !== "VPS Compute");
     }
-    return cards;
+    return cards.map((card) => {
+      if (card.label !== "Security & Billing" || vpsProductEnabled) return card;
+
+      return {
+        ...card,
+        description:
+          "Role-based access, support workflows, and transparent prepaid wallet billing.",
+        specs: [
+          { label: "Access", value: "Role-based" },
+          { label: "Billing", value: "Wallet" },
+          { label: "Support", value: "24/7" },
+        ],
+      };
+    });
   }, [hostingEnabled, vpsProductEnabled]);
 
   const visiblePlatformCards = useMemo(() => {
@@ -545,42 +568,113 @@ export default function HomeRedesign() {
       cards = cards.filter(
         (card) =>
           card.title !== "Lightning Fast Setup" &&
-          card.title !== "Browser-Based SSH & Hosting Tools",
+          card.title !== "Browser-Based SSH & Hosting Tools" &&
+          card.title !== "Real-Time Monitoring" &&
+          card.title !== "Automated Backups",
       );
     }
-    return cards;
+    if (!vpsProductEnabled && !hostingEnabled) {
+      cards = cards.filter((card) => card.title !== "Global Network");
+    }
+
+    return cards.map((card) => {
+      if (card.title === "Predictable Pricing" && !vpsProductEnabled) {
+        return {
+          ...card,
+          description: hostingEnabled
+            ? "Choose monthly plans with clear wallet controls. No hidden fees, no complicated contracts."
+            : "Fund your wallet and keep account spending clear. No hidden fees, no complicated contracts.",
+          metric: hostingEnabled ? "Monthly precision" : "Clear billing",
+        };
+      }
+
+      if (card.title === "REST API" && !vpsProductEnabled && !hostingEnabled) {
+        return {
+          ...card,
+          description:
+            "Manage account and workspace workflows programmatically with API access for automation and integration.",
+        };
+      }
+
+      return card;
+    });
   }, [hostingEnabled, vpsProductEnabled]);
 
-  const visibleSolutionCards = useMemo(
-    () =>
-      hostingEnabled
-        ? solutionCards
-        : solutionCards
-            .filter((card) => card.title !== "Web Hosting Customers")
-            .map((card) => ({
-              ...card,
-              detail: card.detailNoHosting ?? card.detail,
-              bullets: card.bulletsNoHosting ?? card.bullets,
-            })),
-    [hostingEnabled],
-  );
+  const visibleSolutionCards = useMemo(() => {
+    let cards = hostingEnabled
+      ? solutionCards
+      : solutionCards.filter((card) => card.title !== "Web Hosting Customers");
 
-  const visibleFaqs = hostingEnabled
-    ? faqs
-    : faqs.filter((faq) =>
-        !faq.question.toLowerCase().includes("web hosting") &&
-        !faq.answer.toLowerCase().includes("enhance") &&
-        !faq.question.toLowerCase().includes("managed")
-      );
+    if (!vpsProductEnabled && !hostingEnabled) {
+      cards = cards.filter((card) => card.title !== "Production Workloads");
+    }
 
-  const visibleTestimonials = hostingEnabled
-    ? testimonials
-    : testimonials.filter((test) =>
-        !test.quote.toLowerCase().includes("application hosting")
-      );
+    return cards.map((card) => ({
+      ...card,
+      detail: !vpsProductEnabled
+        ? card.detailNoVps ?? card.detailNoHosting ?? card.detail
+        : !hostingEnabled
+          ? card.detailNoHosting ?? card.detail
+          : card.detail,
+      bullets: !vpsProductEnabled
+        ? card.bulletsNoVps ?? card.bulletsNoHosting ?? card.bullets
+        : !hostingEnabled
+          ? card.bulletsNoHosting ?? card.bullets
+          : card.bullets,
+    }));
+  }, [hostingEnabled, vpsProductEnabled]);
+
+  const visibleFaqs = faqs.filter((faq) => {
+    const text = `${faq.question} ${faq.answer}`.toLowerCase();
+    if (!hostingEnabled && (text.includes("web hosting") || text.includes("enhance") || text.includes("managed"))) {
+      return false;
+    }
+    if (!vpsProductEnabled && (text.includes("vps") || text.includes("egress") || text.includes("root access") || text.includes("nested virtualization") || text.includes("ddos") || text.includes("active servers") || text.includes("server environment"))) {
+      return false;
+    }
+    return true;
+  });
+
+  const visibleTestimonials = testimonials.filter((test) => {
+    const quote = test.quote.toLowerCase();
+    if (!hostingEnabled && quote.includes("application hosting")) return false;
+    if (!vpsProductEnabled && (quote.includes("vps") || quote.includes("ssh") || quote.includes("server") || quote.includes("deployment"))) return false;
+    return true;
+  });
 
   const showHostingPricingCard =
     hostingEnabled && hostingLowestPrice !== null && hostingCheapestPlan != null;
+  const showVpsPricingCard = vpsProductEnabled;
+
+  const heroSubtitle = vpsProductEnabled
+    ? `Deploy high-performance virtual machines${hostingEnabled ? " and managed web hosting" : ""} from one dashboard. Full root access, hourly billing, zero surprises.`
+    : hostingEnabled
+      ? "Launch managed web hosting from one dashboard. Clear billing, team workspaces, and support are built in."
+      : "Manage your account, teams, billing, and support from one dashboard. Clear controls, zero surprises.";
+
+  const heroCtaLabel = vpsProductEnabled
+    ? "Deploy Your First Server"
+    : hostingEnabled
+      ? "Start Hosting"
+      : "Create Account";
+
+  const heroStats = vpsProductEnabled
+    ? [
+        { icon: Globe2, label: `${regionCount}+ Regions` },
+        { icon: Clock3, label: "~45s Deploy" },
+        { icon: ShieldCheck, label: "99.9% Uptime SLA" },
+      ]
+    : hostingEnabled
+      ? [
+          { icon: Globe2, label: `${regionCount}+ Regions` },
+          { icon: PanelsTopLeft, label: "Managed Sites" },
+          { icon: ShieldCheck, label: "99.9% Uptime SLA" },
+        ]
+      : [
+          { icon: Users, label: "Team Workspaces" },
+          { icon: Wallet, label: "Wallet Billing" },
+          { icon: ShieldCheck, label: "24/7 Support" },
+        ];
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -719,13 +813,13 @@ export default function HomeRedesign() {
                   </span>
                 </h1>
                 <p className="mt-6 text-lg md:text-xl leading-relaxed text-muted-foreground max-w-2xl">
-                  Deploy high-performance virtual machines{hostingEnabled ? " and managed web hosting" : ""} from one dashboard. Full root access, hourly billing, zero surprises.
+                  {heroSubtitle}
                 </p>
 
                 <div className="mt-8 flex flex-col sm:flex-row gap-3">
                   <Button size="lg" className="h-12 px-7 rounded-sm" asChild>
                     <Link to="/register" className="flex items-center">
-                      Deploy Your First Server
+                      {heroCtaLabel}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
@@ -735,18 +829,12 @@ export default function HomeRedesign() {
                 </div>
 
                 <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <Globe2 className="h-3.5 w-3.5 text-primary" />
-                    {regionCount}+ Regions
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Clock3 className="h-3.5 w-3.5 text-primary" />
-                    ~45s Deploy
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                    99.9% Uptime SLA
-                  </span>
+                  {heroStats.map(({ icon: Icon, label }) => (
+                    <span key={label} className="flex items-center gap-1.5">
+                      <Icon className="h-3.5 w-3.5 text-primary" />
+                      {label}
+                    </span>
+                  ))}
                 </div>
               </motion.div>
 
@@ -788,7 +876,13 @@ export default function HomeRedesign() {
                 Platform capabilities
               </h2>
               <p className="mt-2 text-muted-foreground max-w-xl">
-                Everything you need to deploy, manage, and scale cloud infrastructure{hostingEnabled ? " — from VPS to web hosting" : ""}.
+                {vpsProductEnabled && hostingEnabled
+                  ? "Everything you need to deploy, manage, and scale cloud infrastructure, from VPS to web hosting."
+                  : vpsProductEnabled
+                    ? "Everything you need to deploy, manage, and scale cloud infrastructure."
+                    : hostingEnabled
+                      ? "Everything you need to launch, manage, and support websites."
+                      : "Everything you need to manage teams, billing, and support."}
               </p>
             </motion.div>
 
@@ -841,7 +935,9 @@ export default function HomeRedesign() {
                 Everything you need
               </h2>
               <p className="mt-2 text-muted-foreground max-w-xl">
-                A complete toolkit for managing your cloud infrastructure, from provisioning to monitoring.
+                {vpsProductEnabled || hostingEnabled
+                  ? "A complete toolkit for managing your cloud infrastructure, from provisioning to monitoring."
+                  : "A complete toolkit for account management, team workflows, billing, and support."}
               </p>
             </motion.div>
 
@@ -879,7 +975,9 @@ export default function HomeRedesign() {
                 Built for every team
               </h2>
               <p className="mt-2 text-muted-foreground">
-                Whether you're a solo developer testing an app or a growing business scaling production workloads.
+                {vpsProductEnabled || hostingEnabled
+                  ? "Whether you're a solo developer testing an app or a growing business scaling production workloads."
+                  : "Whether you're organizing a team or centralizing account operations."}
               </p>
             </motion.div>
 
@@ -931,10 +1029,12 @@ export default function HomeRedesign() {
               className="text-center mb-12"
             >
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                Get started in under a minute
+                {vpsProductEnabled || hostingEnabled ? "Get started in under a minute" : "Get started in minutes"}
               </h2>
               <p className="mt-2 text-muted-foreground max-w-lg mx-auto">
-                From signup to running infrastructure in four simple steps.
+                {vpsProductEnabled || hostingEnabled
+                  ? "From signup to running infrastructure in four simple steps."
+                  : "From signup to organized workspace operations in four simple steps."}
               </p>
             </motion.div>
 
@@ -944,9 +1044,27 @@ export default function HomeRedesign() {
             >
               {[
                 { num: "01", title: "Sign Up & Add Funds", desc: "Create your account and add funds to your wallet via PayPal.", icon: Users },
-                { num: "02", title: "Choose Infrastructure", desc: "Select your VPS plan, region, and operating system.", icon: Server },
-                { num: "03", title: "Deploy Instantly", desc: "Launch your infrastructure in under 45 seconds.", icon: Rocket },
-                { num: "04", title: "Monitor & Manage", desc: "Track performance and scale through one dashboard.", icon: Activity },
+                {
+                  num: "02",
+                  title: vpsProductEnabled || hostingEnabled ? "Choose a Plan" : "Configure Workspace",
+                  desc: vpsProductEnabled && hostingEnabled
+                    ? "Select your server or hosting package and preferred location."
+                    : vpsProductEnabled
+                      ? "Select your server plan, region, and operating system."
+                      : hostingEnabled
+                        ? "Select your hosting package and website details."
+                        : "Set up your workspace, billing, and organization preferences.",
+                  icon: vpsProductEnabled ? Server : hostingEnabled ? PanelsTopLeft : Users,
+                },
+                {
+                  num: "03",
+                  title: vpsProductEnabled || hostingEnabled ? "Launch Instantly" : "Start Collaborating",
+                  desc: vpsProductEnabled || hostingEnabled
+                    ? "Launch your service quickly from the dashboard."
+                    : "Invite your team and centralize your account operations.",
+                  icon: Rocket,
+                },
+                { num: "04", title: "Monitor & Manage", desc: "Track activity and manage everything through one dashboard.", icon: Activity },
               ].map((step) => (
                 <motion.div key={step.num} {...staggerItem}>
                   <div className="h-full border border-border/50 bg-card/50 rounded-sm p-6 text-center">
@@ -968,6 +1086,7 @@ export default function HomeRedesign() {
         </section>
 
         {/* ── 6. TESTIMONIALS ───────────────────────────────────────── */}
+        {visibleTestimonials.length > 0 && (
         <section id="testimonials" className="py-24 border-t border-border bg-background">
           <div className="mx-auto max-w-7xl px-6 md:px-12">
             <motion.div
@@ -1019,6 +1138,7 @@ export default function HomeRedesign() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ── 7. PRICING PREVIEW ────────────────────────────────────── */}
         <section className="border-t border-border bg-background py-24">
@@ -1032,7 +1152,11 @@ export default function HomeRedesign() {
                 Simple, transparent pricing
               </h2>
               <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
-                Add funds to your prepaid wallet and instances are billed by the hour. No hidden fees, no contracts.
+                {vpsProductEnabled
+                  ? "Add funds to your prepaid wallet and instances are billed by the hour. No hidden fees, no contracts."
+                  : hostingEnabled
+                    ? "Choose a hosting plan with clear monthly pricing. No hidden fees, no contracts."
+                    : "Review available plans with clear pricing when product catalogs are enabled."}
               </p>
             </motion.div>
 
@@ -1041,10 +1165,10 @@ export default function HomeRedesign() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className={cn(
                 "mx-auto grid grid-cols-1 gap-6",
-                showHostingPricingCard ? "max-w-4xl md:grid-cols-2" : "max-w-md",
+                showVpsPricingCard && showHostingPricingCard ? "max-w-4xl md:grid-cols-2" : "max-w-md",
               )}
             >
-              {vpsCheapestPlan ? (
+              {showVpsPricingCard && (vpsCheapestPlan ? (
                 <Card className="border border-border/50 bg-card rounded-sm flex flex-col">
                   <CardHeader className="pb-2">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
@@ -1126,7 +1250,7 @@ export default function HomeRedesign() {
                     </Button>
                   </CardContent>
                 </Card>
-              )}
+              ))}
 
               {showHostingPricingCard && (
                 <Card className="border border-border/50 bg-card rounded-sm flex flex-col">
@@ -1196,7 +1320,7 @@ export default function HomeRedesign() {
                   Frequently asked questions
                 </h2>
                 <p className="text-muted-foreground">
-                  Everything you need to know about hosting with {BRAND_NAME}.
+                  Everything you need to know about {BRAND_NAME}.
                 </p>
                 <div className="mt-6 rounded-sm border border-border/50 bg-card p-6">
                   <p className="text-sm font-medium">
@@ -1237,11 +1361,14 @@ export default function HomeRedesign() {
             <div className="border border-border/50 bg-card rounded-sm px-6 py-16 text-center sm:px-12">
               <div className="space-y-6">
                 <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                  Ready to launch your server?
+                  {vpsProductEnabled ? "Ready to launch your server?" : hostingEnabled ? "Ready to launch your website?" : "Ready to get started?"}
                 </h2>
                 <p className="mx-auto max-w-xl text-lg text-muted-foreground">
-                  Create your account, add funds, and deploy a high-performance
-                  Linux VPS in less than a minute.
+                  {vpsProductEnabled
+                    ? "Create your account, add funds, and deploy a high-performance Linux VPS in less than a minute."
+                    : hostingEnabled
+                      ? "Create your account, choose a hosting plan, and launch your website from one dashboard."
+                      : "Create your account and manage your workspace, billing, and support from one dashboard."}
                 </p>
 
                 <SocialProof />
