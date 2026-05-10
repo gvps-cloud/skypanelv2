@@ -578,42 +578,44 @@ const PricingPage: React.FC = () => {
               onValueChange={(value) => setActiveProduct(value as 'vps' | 'hosting')}
               className="space-y-16"
             >
-              <div className="mx-auto max-w-3xl rounded-sm border border-primary/25 bg-card p-3 shadow-none">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="px-2 text-center sm:text-left">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-                      Product catalog
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {hostingEnabled && vpsProductEnabled
-                        ? "Switch between VPS compute plans and Enhance hosting packages."
-                        : hostingEnabled
-                          ? "Enhance hosting packages available on this platform."
-                          : vpsProductEnabled
-                            ? "Choose from our VPS instances with transparent hourly and monthly billing."
-                            : "Product pricing will appear here when offerings are enabled for this deployment."}
-                    </p>
-                  </div>
-                  <TabsList className="h-12 rounded-sm border border-border/60 bg-muted/50 p-1.5">
-                    {vpsProductEnabled && (
-                    <TabsTrigger
-                      value="vps"
-                      className="rounded-sm px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                    >
-                      VPS
-                    </TabsTrigger>
-                    )}
-                    {hostingEnabled && (
-                      <TabsTrigger
-                        value="hosting"
-                        className="rounded-sm px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                      >
-                        Hosting
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
-                </div>
-              </div>
+               <div className="mx-auto max-w-3xl rounded-sm border border-primary/25 bg-card p-3 shadow-none">
+                 <div className="flex flex-col items-center text-center gap-4 sm:flex-row sm:justify-center sm:gap-12">
+                   <div className="max-w-sm">
+                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+                       Product catalog
+                     </p>
+                     <p className="mt-1 text-sm text-muted-foreground">
+                       {hostingEnabled && vpsProductEnabled
+                         ? "Switch between VPS compute plans and Enhance hosting packages."
+                         : hostingEnabled
+                           ? "Enhance hosting packages available on this platform."
+                           : vpsProductEnabled
+                             ? "Choose from our VPS instances with transparent hourly and monthly billing."
+                             : "Product pricing will appear here when offerings are enabled for this deployment."}
+                     </p>
+                   </div>
+                   <div className="w-full sm:w-auto">
+                     <TabsList className="h-12 w-full grid grid-cols-2 rounded-sm border border-border/60 bg-muted/50 p-1.5 sm:flex sm:justify-start">
+                     {vpsProductEnabled && (
+                     <TabsTrigger
+                       value="vps"
+                       className="rounded-sm px-3 sm:px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                     >
+                       VPS
+                     </TabsTrigger>
+                     )}
+                     {hostingEnabled && (
+                       <TabsTrigger
+                         value="hosting"
+                         className="rounded-sm px-3 sm:px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                       >
+                         Hosting
+                       </TabsTrigger>
+                     )}
+                   </TabsList>
+                   </div>
+                 </div>
+               </div>
 
               {vpsProductEnabled && (
               <TabsContent value="vps" className="mt-0">
