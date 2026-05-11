@@ -180,7 +180,7 @@ export const authenticateToken = async (
 
     // Get user from database (including active_organization_id)
     const userResult = await query(
-      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled", active_organization_id FROM users WHERE id = $1',
+      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled", active_organization_id, status FROM users WHERE id = $1',
       [decoded.userId]
     );
 
@@ -193,6 +193,14 @@ export const authenticateToken = async (
     }
 
     const user = userResult.rows[0];
+
+    // Reject suspended/inactive users (admins are always exempt)
+    if (user.role !== 'admin' && user.status && user.status !== 'active') {
+      return res.status(403).json({
+        error: 'Account is suspended',
+        code: 'ACCOUNT_SUSPENDED'
+      });
+    }
 
     const requestedOrgId = req.headers['x-organization-id'] as string | undefined;
     const organizationId = await resolveOrganizationIdForUser({
@@ -318,7 +326,7 @@ export const optionalAuth = async (
 
     // Get user from database (including active_organization_id for org resolution)
     const userResult = await query(
-      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled", active_organization_id FROM users WHERE id = $1',
+      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled", active_organization_id, status FROM users WHERE id = $1',
       [decoded.userId]
     );
 
@@ -327,6 +335,11 @@ export const optionalAuth = async (
     }
 
     const user = userResult.rows[0];
+
+    // Suspended/inactive non-admin users are treated as unauthenticated
+    if (user.role !== 'admin' && user.status && user.status !== 'active') {
+      return next();
+    }
 
     const requestedOrgId = req.headers['x-organization-id'] as string | undefined;
     const organizationId = await resolveOrganizationIdForUser({

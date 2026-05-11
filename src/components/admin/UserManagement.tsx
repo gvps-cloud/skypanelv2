@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api';
+import { AdminHeroCard } from '@/components/admin/AdminHeroCard';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -535,38 +536,28 @@ export const UserManagement: React.FC = () => {
 
     return (
         <>
-            <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-                <div className="relative z-10">
-                    <Badge variant="secondary" className="mb-3">
-                        Administration
-                    </Badge>
-                    <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                        User Management
-                    </h2>
-                    <p className="mt-2 max-w-2xl text-muted-foreground">
-                        Manage all users on the platform, edit permissions, and impersonate for support
-                    </p>
-                </div>
-
+            <AdminHeroCard
+                badge="iam.users"
+                badgeIcon={Users}
+                title="User Management"
+                description="Manage all users on the platform, edit permissions, and impersonate for support"
+                decorativeIcon={Users}
+            >
                 <div className="mt-6 grid grid-cols-3 gap-4 max-w-md">
                     <div className="rounded-lg bg-background/50 backdrop-blur-sm border p-3 text-center">
-                        <p className="text-2xl font-bold">{totalUsers}</p>
-                        <p className="text-xs text-muted-foreground">Total Users</p>
+                        <p className="text-2xl font-bold font-mono">{totalUsers}</p>
+                        <p className="text-xs text-muted-foreground font-mono">Total Users</p>
                     </div>
                     <div className="rounded-lg bg-background/50 backdrop-blur-sm border p-3 text-center">
-                        <p className="text-2xl font-bold text-primary">{adminCount}</p>
-                        <p className="text-xs text-muted-foreground">Admins</p>
+                        <p className="text-2xl font-bold text-primary font-mono">{adminCount}</p>
+                        <p className="text-xs text-muted-foreground font-mono">Admins</p>
                     </div>
                     <div className="rounded-lg bg-background/50 backdrop-blur-sm border p-3 text-center">
-                        <p className="text-2xl font-bold">{userCount}</p>
-                        <p className="text-xs text-muted-foreground">Users</p>
+                        <p className="text-2xl font-bold font-mono">{userCount}</p>
+                        <p className="text-xs text-muted-foreground font-mono">Users</p>
                     </div>
                 </div>
-
-                <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-                    <Users className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-                </div>
-            </div>
+            </AdminHeroCard>
 
             {selectedUserCount > 0 && (
                 <Card className="mb-4 border-primary/20 bg-primary/5 border-primary/25">

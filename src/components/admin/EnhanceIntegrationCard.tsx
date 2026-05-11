@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Globe, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 
 export function EnhanceIntegrationCard() {
   const { data: status, isLoading, refetch } = useEnhanceAdminStatus();
@@ -39,7 +40,15 @@ export function EnhanceIntegrationCard() {
   }
 
   return (
-    <Card className="border-primary/25">
+    <>
+      <AdminHeroCard
+        badge="hosting.enhance"
+        badgeIcon={Globe}
+        title="Enhance Web Hosting"
+        description="Manage Enhance hosting integration, sync plans, and monitor subscriptions"
+        decorativeIcon={Globe}
+      />
+      <Card className="border-primary/25">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Globe className="w-5 h-5" />
@@ -109,5 +118,6 @@ export function EnhanceIntegrationCard() {
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }

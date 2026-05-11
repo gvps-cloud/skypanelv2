@@ -18,6 +18,10 @@ vi.mock("../../lib/database.js", () => ({
   query: (...args: any[]) => mockQuery(...args),
 }));
 
+vi.mock("../../middleware/rateLimiting.js", () => ({
+  createCustomRateLimiter: () => (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
+}));
+
 function createApp(userOverride?: Record<string, any>): Express {
   const app = express();
   app.use(express.json());
@@ -68,5 +72,118 @@ describe("Organizations Resources Route", () => {
     expect(res.body.resources).toHaveLength(1);
     expect(res.body.resources[0].hosting_subscriptions).toHaveLength(7);
     expect(mockQuery.mock.calls[5][0]).not.toContain("rn <= 5");
+  });
+
+  it("maps custom role permission arrays into the resources permission object", async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: "org-uuid-001", name: "Acme Corp" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            organization_id: "org-uuid-001",
+            role_id: "role-uuid-001",
+            legacy_role: "member",
+            permissions: ["billing_manage", "hosting_manage", "members_manage"],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const app = createApp();
+    const res = await request(app).get("/organizations/resources");
+
+    expect(res.status).toBe(200);
+    expect(res.body.resources[0].permissions.billing_manage).toBe(true);
+    expect(res.body.resources[0].permissions.hosting_manage).toBe(true);
+    expect(res.body.resources[0].permissions.members_manage).toBe(true);
+    expect(res.body.resources[0].permissions.vps_view).toBe(false);
+  });
+
+  it("allows custom roles with members_manage arrays to manage role definitions", async () => {
+    const organizationId = "00000000-0000-0000-0000-000000000010";
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            role: "member",
+            role_name: "team_lead",
+            permissions: ["members_manage"],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "role-uuid-002",
+            organization_id: organizationId,
+            name: "Hosting Operators",
+            permissions: ["hosting_manage", "egress_manage"],
+            is_custom: true,
+          },
+        ],
+      });
+
+    const app = createApp();
+    const res = await request(app)
+      .post(`/organizations/${organizationId}/roles`)
+      .send({
+        name: "Hosting Operators",
+        permissions: ["hosting_manage", "egress_manage"],
+      });
+
+    expect(res.status).toBe(201);
+    expect(mockQuery.mock.calls[1][1]).toEqual([
+      organizationId,
+      "Hosting Operators",
+      JSON.stringify(["hosting_manage", "egress_manage"]),
+      true,
+    ]);
+  });
+
+  it("accepts hosting and egress permissions when updating custom roles", async () => {
+    const organizationId = "00000000-0000-0000-0000-000000000010";
+    const roleId = "00000000-0000-0000-0000-000000000011";
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            role: "member",
+            role_name: "team_lead",
+            permissions: ["members_manage"],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ is_custom: true }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: roleId,
+            organization_id: organizationId,
+            name: "Updated Operators",
+            permissions: ["hosting_manage", "egress_manage"],
+            is_custom: true,
+          },
+        ],
+      });
+
+    const app = createApp();
+    const res = await request(app)
+      .put(`/organizations/${organizationId}/roles/${roleId}`)
+      .send({
+        name: "Updated Operators",
+        permissions: ["hosting_manage", "egress_manage"],
+      });
+
+    expect(res.status).toBe(200);
+    expect(mockQuery.mock.calls[2][1]).toEqual([
+      "Updated Operators",
+      JSON.stringify(["hosting_manage", "egress_manage"]),
+      roleId,
+      organizationId,
+    ]);
   });
 });

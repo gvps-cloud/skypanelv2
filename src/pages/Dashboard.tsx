@@ -33,6 +33,14 @@ import { MatrixRain } from "@/components/fx/MatrixRain";
 import { StatusHeartbeat } from "@/components/fx/StatusHeartbeat";
 import { TerminalPageHeader, TerminalPanel } from "@/components/terminal";
 import { cn } from "@/lib/utils";
+import type { OrganizationResources } from "@/types/organizations";
+
+type DashboardPermissions = OrganizationResources["permissions"];
+type DashboardPermission = keyof DashboardPermissions;
+
+interface OrganizationResourcesResponse {
+  resources?: Array<Pick<OrganizationResources, "organization_id" | "permissions">>;
+}
 
 interface MetricSummary {
   average: number;
@@ -161,6 +169,10 @@ interface ActivityItem {
   status: "success" | "warning" | "error" | "info";
 }
 
+const hasDashboardPermission = (
+  permissions: DashboardPermissions | null,
+  permission: DashboardPermission,
+) => permissions?.[permission] ?? true;
 
 const mapVpsInstance = async (instance: NonNullable<VpsListResponse["instances"]>[number]): Promise<VPSStats> => {
   let metrics: VpsMetrics | undefined;
@@ -223,6 +235,7 @@ const mapActivity = (activity: NonNullable<ActivityResponse["activities"]>[numbe
 const Dashboard: React.FC = () => {
   const [vpsInstances, setVpsInstances] = useState<VPSStats[]>([]);
   const [billing, setBilling] = useState<BillingStats | null>(null);
+  const [currentPermissions, setCurrentPermissions] = useState<DashboardPermissions | null>(null);
   const { data: hostingStatus } = useHostingStatus();
   const hostingEnabled = hostingStatus?.enabled === true;
   const { data: vpsProductStatus } = useVpsProductStatus();
@@ -246,57 +259,104 @@ const Dashboard: React.FC = () => {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDashboardTab, setActiveDashboardTab] = useState<"vps" | "hosting">("vps");
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
 
   const loadDashboardData = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    try {
-      if (vpsEnabledRef.current) {
+
+    const loadCurrentPermissions = async (): Promise<DashboardPermissions | null> => {
+      try {
+        const data = await apiClient.get<OrganizationResourcesResponse>("/organizations/resources");
+        const currentResource =
+          data.resources?.find((resource) => resource.organization_id === user?.organizationId) ??
+          data.resources?.[0];
+        const permissions = currentResource?.permissions ?? null;
+        setCurrentPermissions(permissions);
+        return permissions;
+      } catch (error) {
+        console.warn("Failed to load dashboard permissions", error);
+        setCurrentPermissions(null);
+        return null;
+      }
+    };
+
+    const permissions = await loadCurrentPermissions();
+    const canLoad = (permission: DashboardPermission) => hasDashboardPermission(permissions, permission);
+
+    const loadVps = async () => {
+      if (!vpsEnabledRef.current || !canLoad("vps_view")) {
+        setVpsInstances([]);
+        return;
+      }
+
+      try {
         const vpsData = await apiClient.get<VpsListResponse>("/vps");
         const instances: VPSStats[] = await Promise.all((vpsData.instances ?? []).map(mapVpsInstance));
         setVpsInstances(instances);
-      } else {
+      } catch (error) {
+        console.warn("Failed to load VPS dashboard data", error);
         setVpsInstances([]);
       }
+    };
 
-      const walletData = await apiClient.get<WalletBalanceResponse>("/payments/wallet/balance");
-      const paymentsData = await apiClient.get<PaymentsHistoryResponse>(
-        "/payments/history?limit=1&status=completed",
-      );
-      const hostingWalletData = hostingEnabledRef.current
-        ? await apiClient
-            .get<WalletBalanceResponse>("/payments/wallet/hosting/balance")
-            .catch(() => ({ balance: 0 }))
-        : { balance: 0 };
-
-      const lastPaymentItem = (paymentsData.payments ?? [])[0];
-      const monthlySpend = await getMonthlySpendWithFallback();
-
-      setBilling({
-        walletBalance: walletData.balance ?? 0,
-        hostingWalletBalance: hostingWalletData.balance ?? 0,
-        monthlySpend,
-        lastPayment: {
-          amount: lastPaymentItem?.amount ?? 0,
-          date: lastPaymentItem?.created_at ?? "",
-        },
-      });
-
-      if (hostingEnabledRef.current) {
-        try {
-          const hostingData = await apiClient.get<HostingServicesResponse>("/hosting/services");
-          const services = hostingData.services ?? [];
-          setHostingServices(services.map(mapHostingService));
-        } catch (error) {
-          console.warn("Failed to load hosting services", error);
-          setHostingServices([]);
-        }
-      } else {
-        setHostingServices([]);
+    const loadBilling = async () => {
+      if (!canLoad("billing_view")) {
+        setBilling(null);
+        return;
       }
 
+      try {
+        const walletData = await apiClient.get<WalletBalanceResponse>("/payments/wallet/balance");
+        const paymentsData = await apiClient.get<PaymentsHistoryResponse>(
+          "/payments/history?limit=1&status=completed",
+        );
+        const hostingWalletData = hostingEnabledRef.current
+          ? await apiClient
+              .get<WalletBalanceResponse>("/payments/wallet/hosting/balance")
+              .catch(() => ({ balance: 0 }))
+          : { balance: 0 };
+
+        const lastPaymentItem = (paymentsData.payments ?? [])[0];
+        const monthlySpend = await getMonthlySpendWithFallback();
+
+        setBilling({
+          walletBalance: walletData.balance ?? 0,
+          hostingWalletBalance: hostingWalletData.balance ?? 0,
+          monthlySpend,
+          lastPayment: {
+            amount: lastPaymentItem?.amount ?? 0,
+            date: lastPaymentItem?.created_at ?? "",
+          },
+        });
+      } catch (error) {
+        console.warn("Failed to load billing dashboard data", error);
+        setBilling(null);
+      }
+    };
+
+    const loadHosting = async () => {
+      if (!hostingEnabledRef.current || !canLoad("hosting_view")) {
+        setHostingServices([]);
+        return;
+      }
+
+      try {
+        const hostingData = await apiClient.get<HostingServicesResponse>("/hosting/services");
+        const services = hostingData.services ?? [];
+        setHostingServices(services.map(mapHostingService));
+      } catch (error) {
+        console.warn("Failed to load hosting services", error);
+        setHostingServices([]);
+      }
+    };
+
+    const loadActivity = async () => {
       try {
         const actData = await apiClient.get<ActivityResponse>("/activity/recent?limit=10");
         const activities = actData.activities ?? [];
@@ -304,24 +364,41 @@ const Dashboard: React.FC = () => {
         setRecentActivity(mapped);
       } catch (error) {
         console.warn("Failed to load recent activity", error);
+        setRecentActivity([]);
       }
+    };
+
+    try {
+      await Promise.all([loadVps(), loadBilling(), loadHosting(), loadActivity()]);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [hostingEnabled, token, user?.organizationId, vpsEnabled]);
 
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
 
+  const canAccess = useCallback(
+    (permission: DashboardPermission) => hasDashboardPermission(currentPermissions, permission),
+    [currentPermissions],
+  );
+  const canViewVps = vpsEnabled && canAccess("vps_view");
+  const canCreateVps = vpsEnabled && canAccess("vps_create");
+  const canViewBilling = canAccess("billing_view");
+  const canManageBilling = canAccess("billing_manage");
+  const canViewHosting = hostingEnabled && canAccess("hosting_view");
+  const canManageHosting = hostingEnabled && canAccess("hosting_manage");
+  const canCreateTickets = canAccess("tickets_create");
+
   useEffect(() => {
-    if (!vpsEnabled && hostingEnabled && activeDashboardTab === "vps") {
+    if (!canViewVps && canViewHosting && activeDashboardTab === "vps") {
       setActiveDashboardTab("hosting");
     }
-  }, [vpsEnabled, hostingEnabled, activeDashboardTab]);
+  }, [canViewVps, canViewHosting, activeDashboardTab]);
 
   const quickActions = useMemo(() => {
     const actions = [
@@ -330,31 +407,33 @@ const Dashboard: React.FC = () => {
         description: "Launch an Enhance web hosting subscription.",
         to: "/hosting/store",
         icon: <Globe className="h-4 w-4" />,
-        hidden: !hostingEnabled,
+        hidden: !canManageHosting,
       },
       {
         title: "Launch a VPS",
         description: "Deploy a fresh instance in under a minute.",
         to: "/vps",
         icon: <Plus className="h-4 w-4" />,
-        hidden: !vpsEnabled,
+        hidden: !canCreateVps,
       },
       {
         title: "Top up wallet",
         description: "Add credits with secure PayPal checkout.",
         to: "/billing",
         icon: <Wallet className="h-4 w-4" />,
+        hidden: !canManageBilling,
       },
       {
         title: "Create support ticket",
         description: "Reach the platform team 24/7.",
         to: "/support",
         icon: <ShieldCheck className="h-4 w-4" />,
+        hidden: !canCreateTickets,
       },
     ];
 
     return actions.filter((action) => !action.hidden);
-  }, [hostingEnabled, vpsEnabled]);
+  }, [canCreateTickets, canCreateVps, canManageBilling, canManageHosting]);
 
   const heroStats = useMemo(() => {
     if (!vpsInstances.length) {
@@ -463,7 +542,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Product content skeleton */}
-        <TerminalPanel title={vpsEnabled ? "VPS FLEET" : hostingEnabled ? "WEB HOSTING" : "WORKSPACE"} bodyClassName="p-4">
+        <TerminalPanel title={canViewVps ? "VPS FLEET" : canViewHosting ? "WEB HOSTING" : "WORKSPACE"} bodyClassName="p-4">
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center justify-between rounded-sm border border-border bg-card p-3">
@@ -506,7 +585,7 @@ const Dashboard: React.FC = () => {
             >
               &gt;
             </span>
-            {vpsEnabled && (
+            {canViewVps && (
               <Badge
                 variant="outline"
                 className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
@@ -515,7 +594,7 @@ const Dashboard: React.FC = () => {
                 {heroStats.running} vps active
               </Badge>
             )}
-            {hostingEnabled && (
+            {canViewHosting && (
               <Badge
                 variant="outline"
                 className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
@@ -524,7 +603,7 @@ const Dashboard: React.FC = () => {
                 {activeHostingServices} hosting active
               </Badge>
             )}
-            {vpsEnabled && heroStats.flagged > 0 && (
+            {canViewVps && heroStats.flagged > 0 && (
               <Badge
                 variant="secondary"
                 className="gap-2 rounded-sm px-2.5 py-1 text-xs shadow-none"
@@ -533,7 +612,7 @@ const Dashboard: React.FC = () => {
                 {heroStats.flagged} attention
               </Badge>
             )}
-            {vpsEnabled && heroStats.averageCpu !== null && (
+            {canViewVps && heroStats.averageCpu !== null && (
               <Badge
                 variant="outline"
                 className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
@@ -548,11 +627,13 @@ const Dashboard: React.FC = () => {
             <div className="hidden sm:block w-[140px] shrink-0 border border-border/50 rounded-sm bg-card/30 p-1">
               <StatusHeartbeat height={32} />
             </div>
-            <MonthlyResetIndicator
-              monthlySpend={monthlySpend}
-              showAnimation={false}
-              className="sm:items-center sm:text-left"
-            />
+            {canViewBilling && (
+              <MonthlyResetIndicator
+                monthlySpend={monthlySpend}
+                showAnimation={false}
+                className="sm:items-center sm:text-left"
+              />
+            )}
           </div>
         </div>
 
@@ -596,15 +677,15 @@ const Dashboard: React.FC = () => {
           </div>
         </TerminalPanel>
 
-        {hostingEnabled ? (
+        {canViewHosting ? (
           <Tabs
-            value={vpsEnabled ? activeDashboardTab : "hosting"}
+            value={canViewVps ? activeDashboardTab : "hosting"}
             onValueChange={(v) => setActiveDashboardTab(v as "vps" | "hosting")}
             className="space-y-6"
           >
             <div className="flex items-center justify-between gap-4">
               <TabsList className="inline-flex h-10 gap-0 rounded-sm border border-border bg-muted/30 p-0 shadow-none">
-                {vpsEnabled && (
+                {canViewVps && (
                   <TabsTrigger
                     value="vps"
                     className="rounded-none border-r border-border px-5 py-2 text-xs font-semibold uppercase tracking-wide last:border-r-0 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent"
@@ -623,7 +704,7 @@ const Dashboard: React.FC = () => {
               </TabsList>
             </div>
 
-            {vpsEnabled && (
+            {canViewVps && (
             <TabsContent value="vps" className="mt-0">
               <TerminalPanel title="VPS FLEET" bodyClassName="p-4 md:p-6">
                 <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -639,6 +720,7 @@ const Dashboard: React.FC = () => {
                   </Button>
                 </div>
                   <div className="space-y-6">
+                    {canViewBilling && (
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-0">
                       <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-primary/10 text-primary">
@@ -699,6 +781,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
                     </div>
+                    )}
 
                     <div className="space-y-3">
                     {vpsInstances.length === 0 ? (
@@ -717,12 +800,14 @@ const Dashboard: React.FC = () => {
                           <p className="mt-2 max-w-md text-sm text-muted-foreground">
                             Deploy your first VPS to attach live metrics to this pane.
                           </p>
-                          <div className="mt-6 flex flex-wrap gap-3">
-                            <Button size="lg" onClick={() => navigate('/vps')}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Deploy VPS
-                            </Button>
-                          </div>
+                          {canCreateVps && (
+                            <div className="mt-6 flex flex-wrap gap-3">
+                              <Button size="lg" onClick={() => navigate('/vps')}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Deploy VPS
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -803,19 +888,23 @@ const Dashboard: React.FC = () => {
                     Website subscriptions, hosting wallet, and billing readiness.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" className="rounded-sm shadow-none" asChild>
-                      <Link to="/billing">Fund wallet</Link>
-                    </Button>
-                    <Button size="sm" className="rounded-sm shadow-none" asChild>
-                      <Link to="/hosting/store">
-                        Create Hosting
-                        <ArrowUpRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
+                    {canManageBilling && (
+                      <Button variant="outline" size="sm" className="rounded-sm shadow-none" asChild>
+                        <Link to="/billing">Fund wallet</Link>
+                      </Button>
+                    )}
+                    {canManageHosting && (
+                      <Button size="sm" className="rounded-sm shadow-none" asChild>
+                        <Link to="/hosting/store">
+                          Create Hosting
+                          <ArrowUpRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 </div>
                   <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className={cn("grid gap-4", canViewBilling ? "md:grid-cols-3" : "md:grid-cols-2")}>
                       <div className="rounded-sm border border-border bg-card p-4">
                         <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-border/60 bg-primary/10 text-primary">
                           <Globe className="h-4 w-4" />
@@ -828,20 +917,22 @@ const Dashboard: React.FC = () => {
                           {hostingServices.length} total subscription{hostingServices.length === 1 ? "" : "s"}
                         </p>
                       </div>
-                      <div className="rounded-sm border border-border bg-card p-4">
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-border/60 bg-primary/10 text-primary">
-                          <Wallet className="h-4 w-4" />
+                      {canViewBilling && (
+                        <div className="rounded-sm border border-border bg-card p-4">
+                          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-border/60 bg-primary/10 text-primary">
+                            <Wallet className="h-4 w-4" />
+                          </div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            Hosting Wallet
+                          </p>
+                          <p className="mt-1 text-2xl font-semibold tabular-nums">
+                            {formatBillingAmount(hostingWalletBalance)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Reserved for monthly hosting charges
+                          </p>
                         </div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                          Hosting Wallet
-                        </p>
-                        <p className="mt-1 text-2xl font-semibold tabular-nums">
-                          {formatBillingAmount(hostingWalletBalance)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Reserved for monthly hosting charges
-                        </p>
-                      </div>
+                      )}
                       <div className="rounded-sm border border-border bg-card p-4">
                         <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-border/60 bg-primary/10 text-primary">
                           <ShieldCheck className="h-4 w-4" />
@@ -867,12 +958,14 @@ const Dashboard: React.FC = () => {
                         <p className="mt-2 max-w-md text-sm text-muted-foreground">
                           Create your first Enhance hosting subscription to manage websites from the dashboard.
                         </p>
-                        <Button className="mt-6 rounded-sm shadow-none" asChild>
-                          <Link to="/hosting/store">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Create Hosting
-                          </Link>
-                        </Button>
+                        {canManageHosting && (
+                          <Button className="mt-6 rounded-sm shadow-none" asChild>
+                            <Link to="/hosting/store">
+                              <Plus className="mr-2 h-4 w-4" />
+                              Create Hosting
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -904,7 +997,7 @@ const Dashboard: React.FC = () => {
               </TerminalPanel>
             </TabsContent>
           </Tabs>
-        ) : vpsEnabled ? (
+        ) : canViewVps ? (
           <TerminalPanel title="VPS FLEET" bodyClassName="p-4 md:p-6">
             <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
               <p className="text-xs text-muted-foreground">
@@ -918,6 +1011,7 @@ const Dashboard: React.FC = () => {
               </Button>
             </div>
               <div className="space-y-6">
+                {canViewBilling && (
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-0">
                   <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-primary/10 text-primary">
@@ -978,6 +1072,7 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                )}
 
                 <div className="space-y-3">
                 {vpsInstances.length === 0 ? (
@@ -996,12 +1091,14 @@ const Dashboard: React.FC = () => {
                       <p className="mt-2 max-w-md text-sm text-muted-foreground">
                         Deploy your first VPS to attach live metrics to this pane.
                       </p>
-                      <div className="mt-6 flex flex-wrap gap-3">
-                        <Button size="lg" className="rounded-sm shadow-none" onClick={() => navigate('/vps')}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Deploy VPS
-                        </Button>
-                      </div>
+                      {canCreateVps && (
+                        <div className="mt-6 flex flex-wrap gap-3">
+                          <Button size="lg" className="rounded-sm shadow-none" onClick={() => navigate('/vps')}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Deploy VPS
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (

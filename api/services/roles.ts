@@ -22,6 +22,28 @@ export type Permission =
   | 'hosting_view'
   | 'hosting_manage';
 
+export const ALL_PERMISSIONS: Permission[] = [
+  'vps_view',
+  'vps_create',
+  'vps_delete',
+  'vps_manage',
+  'notes_view',
+  'notes_manage',
+  'ssh_keys_view',
+  'ssh_keys_manage',
+  'tickets_view',
+  'tickets_create',
+  'tickets_manage',
+  'billing_view',
+  'billing_manage',
+  'egress_view',
+  'egress_manage',
+  'members_manage',
+  'settings_manage',
+  'hosting_view',
+  'hosting_manage',
+];
+
 export interface Role {
   id: string;
   organization_id: string;
@@ -45,25 +67,17 @@ export interface UpdateRoleData {
 
 export const PREDEFINED_ROLES: Record<string, Permission[]> = {
   owner: [
-    'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
-    'notes_view', 'notes_manage',
-    'ssh_keys_view', 'ssh_keys_manage',
-    'tickets_view', 'tickets_create', 'tickets_manage',
-    'billing_view', 'billing_manage',
-    'egress_view', 'egress_manage',
-    'members_manage',
-    'settings_manage',
-    'hosting_view', 'hosting_manage'
+    ...ALL_PERMISSIONS,
   ],
   admin: [
-    'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
-    'notes_view', 'notes_manage',
-    'ssh_keys_view', 'ssh_keys_manage',
-    'tickets_view', 'tickets_create', 'tickets_manage',
-    'billing_view',
-    'egress_view',
-    'settings_manage',
-    'hosting_view', 'hosting_manage'
+    ...ALL_PERMISSIONS,
+  ],
+  billing_manager: [
+    'billing_view', 'billing_manage',
+    'egress_view', 'egress_manage',
+    'hosting_view',
+    'notes_view',
+    'tickets_view', 'tickets_create',
   ],
   member: [
     'vps_view', 'vps_create', 'vps_manage',
@@ -226,7 +240,7 @@ export class RoleService {
     }
 
     const result = await query(
-      `SELECT om.role_id, r.permissions
+      `SELECT om.role_id, om.role as legacy_role, r.name as role_name, r.permissions
        FROM organization_members om
        LEFT JOIN organization_roles r ON om.role_id = r.id
        WHERE om.organization_id = $1 AND om.user_id = $2`,
@@ -239,13 +253,9 @@ export class RoleService {
 
     const member = result.rows[0];
 
-    if (!member.role_id) {
-      return false;
-    }
-
-    const permissions = Array.isArray(member.permissions) 
-      ? member.permissions 
-      : JSON.parse(member.permissions || '[]');
+    const permissions = member.role_id
+      ? this.parsePermissions(member.permissions)
+      : PREDEFINED_ROLES[member.legacy_role as keyof typeof PREDEFINED_ROLES] || [];
 
     return permissions.includes(permission);
   }
@@ -282,24 +292,26 @@ export class RoleService {
         values
       );
 
-      const memberRole = await client.query(
-        `SELECT id FROM organization_roles WHERE organization_id = $1 AND name = 'member'`,
-        [organizationId]
-      );
+      for (const roleName of ['owner', 'admin', 'member']) {
+        const roleResult = await client.query(
+          `SELECT id FROM organization_roles WHERE organization_id = $1 AND name = $2`,
+          [organizationId, roleName]
+        );
+
+        if (roleResult.rows.length === 0) continue;
+
+        await client.query(
+          `UPDATE organization_members
+           SET role_id = $1
+           WHERE organization_id = $2 AND role_id IS NULL AND role = $3`,
+          [roleResult.rows[0].id, organizationId, roleName]
+        );
+      }
 
       const viewerRole = await client.query(
         `SELECT id FROM organization_roles WHERE organization_id = $1 AND name = 'viewer'`,
         [organizationId]
       );
-
-      if (memberRole.rows.length > 0) {
-        await client.query(
-          `UPDATE organization_members
-           SET role_id = $1
-           WHERE organization_id = $2 AND role_id IS NULL AND role = 'member'`,
-          [memberRole.rows[0].id, organizationId]
-        );
-      }
 
       if (viewerRole.rows.length > 0) {
         await client.query(
@@ -345,14 +357,34 @@ export class RoleService {
     );
   }
 
+  static parsePermissions(value: unknown): Permission[] {
+    if (Array.isArray(value)) {
+      return value.filter((permission): permission is Permission =>
+        ALL_PERMISSIONS.includes(permission as Permission)
+      );
+    }
+
+    if (typeof value === 'string') {
+      try {
+        return this.parsePermissions(JSON.parse(value));
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
+  }
+
+  static isValidPermission(permission: string): permission is Permission {
+    return ALL_PERMISSIONS.includes(permission as Permission);
+  }
+
   private static mapRoleFromDb(row: any): Role {
     return {
       id: row.id,
       organization_id: row.organization_id,
       name: row.name,
-      permissions: Array.isArray(row.permissions) 
-        ? row.permissions 
-        : JSON.parse(row.permissions || '[]'),
+      permissions: RoleService.parsePermissions(row.permissions),
       is_custom: row.is_custom,
       created_at: row.created_at,
       updated_at: row.updated_at

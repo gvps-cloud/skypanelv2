@@ -6,6 +6,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   Key,
+  KeyRound,
   RefreshCw,
   Search,
   Trash2,
@@ -22,6 +23,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
+import { AdminHeroCard } from '@/components/admin/AdminHeroCard';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -406,47 +408,13 @@ export const SSHKeyManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-2">
-            Administration
-          </Badge>
-          <h2 className="text-2xl font-bold tracking-tight">SSH Key Management</h2>
-          <p className="text-muted-foreground mt-1">
-            View and manage SSH keys across all organizations
-          </p>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-            <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border">
-              <div className="flex items-center gap-2">
-                <Key className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium text-muted-foreground">Total Keys</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">{totalItems}</p>
-            </div>
-            <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border">
-              <div className="flex items-center gap-2">
-                <Server className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium text-muted-foreground">Synced to Upstream</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">
-                {sshKeys.filter(k => k.linode_key_id).length}
-              </p>
-            </div>
-            <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium text-muted-foreground">Organizations</span>
-              </div>
-              <p className="text-2xl font-bold mt-1">
-                {new Set(sshKeys.map(k => k.organization_id)).size}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="iam.keys"
+        badgeIcon={KeyRound}
+        title="SSH Key Management"
+        description="View and manage SSH keys across all organizations"
+        decorativeIcon={KeyRound}
+      />
 
       {/* Main Card */}
       <Card className="border-primary/25">

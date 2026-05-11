@@ -6,6 +6,8 @@ import {
 } from '@/services/adminEmailTemplateService';
 import { EmailTemplateList } from './EmailTemplateList';
 import { EmailTemplateEditor } from './EmailTemplateEditor';
+import { AdminHeroCard } from '@/components/admin/AdminHeroCard';
+import { Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const EmailTemplatesManager: React.FC = () => {
@@ -77,12 +79,13 @@ export const EmailTemplatesManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Email Templates</h2>
-        <p className="text-muted-foreground">
-          Manage and customize system email templates.
-        </p>
-      </div>
+      <AdminHeroCard
+        badge="comms.templates"
+        badgeIcon={Mail}
+        title="Email Templates"
+        description="Customize transactional email templates for your platform"
+        decorativeIcon={Mail}
+      />
       <EmailTemplateList
         templates={templates}
         onEdit={handleEdit}

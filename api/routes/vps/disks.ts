@@ -19,7 +19,7 @@ import { normalizeProviderStatus, mapConfigProfile } from "./shared/types.js";
 
 const router = express.Router();
 
-async function resolveVpsInstance(req: Request, res: Response) {
+async function resolveVpsInstance(req: Request, res: Response, permission: "vps_manage" | "vps_view" = "vps_manage") {
   const { id } = req.params;
   const user = (req as any).user;
   const userId = user.id;
@@ -27,9 +27,9 @@ async function resolveVpsInstance(req: Request, res: Response) {
   const organizationId = user.organizationId;
 
   if (userRole !== "admin") {
-    const hasPermission = await RoleService.checkPermission(userId, organizationId, "vps_manage");
+    const hasPermission = await RoleService.checkPermission(userId, organizationId, permission);
     if (!hasPermission) {
-      res.status(403).json({ error: "Insufficient permissions", required: "vps_manage" });
+      res.status(403).json({ error: "Insufficient permissions", required: permission });
       return null;
     }
   }
@@ -58,7 +58,7 @@ async function resolveVpsInstance(req: Request, res: Response) {
 
 router.get("/:id/disks", async (req: Request, res: Response) => {
   try {
-    const ctx = await resolveVpsInstance(req, res);
+    const ctx = await resolveVpsInstance(req, res, "vps_view");
     if (!ctx) return;
 
     const disks = await linodeService.listDisks(ctx.providerInstanceId);
@@ -71,7 +71,7 @@ router.get("/:id/disks", async (req: Request, res: Response) => {
 
 router.get("/:id/disks/:diskId", async (req: Request, res: Response) => {
   try {
-    const ctx = await resolveVpsInstance(req, res);
+    const ctx = await resolveVpsInstance(req, res, "vps_view");
     if (!ctx) return;
 
     const diskId = Number(req.params.diskId);

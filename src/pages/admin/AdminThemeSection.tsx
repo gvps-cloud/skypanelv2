@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Palette, Plus, Terminal, Hash, Pipette, Sparkles } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,34 +88,13 @@ export const AdminThemeSection: React.FC<AdminThemeSectionProps> = ({
   return (
     <>
       {/* Hero header */}
-      <div className="relative mb-6 overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(var(--primary-rgb,0,255,128),0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(var(--primary-rgb,0,255,128),0.03)_1px,transparent_1px)] bg-[size:24px_24px]" />
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3 font-mono text-xs uppercase tracking-widest">
-            <Terminal className="mr-1.5 h-3 w-3" />
-            sys.theme
-          </Badge>
-          <h2 className="font-mono text-3xl font-bold tracking-tight md:text-4xl">
-            Theme Manager
-          </h2>
-          <p className="mt-2 max-w-2xl font-mono text-sm text-muted-foreground">
-            <span className="text-primary">$</span> Choose a theme preset that updates instantly for all users
-          </p>
-          {!themeConfigLoading && (
-            <p className="mt-1 font-mono text-xs text-muted-foreground">
-              <span className="text-primary/60">&gt;</span> Last sync: {formattedThemeUpdatedAt}
-            </p>
-          )}
-          {themeConfigLoading && (
-            <p className="mt-1 font-mono text-xs text-primary animate-pulse">
-              &gt; Syncing configuration...
-            </p>
-          )}
-        </div>
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Palette className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="sys.theme"
+        badgeIcon={Terminal}
+        title="Theme Manager"
+        description="Choose a theme preset that updates instantly for all users"
+        decorativeIcon={Palette}
+      />
 
       {/* Preset grid */}
       <div className="rounded-xl border border-border/60 bg-card shadow-sm">

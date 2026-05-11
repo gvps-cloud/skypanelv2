@@ -4,6 +4,7 @@ import { requireVpsEnabledForUsers } from '../middleware/vpsHosting.js';
 import { query } from '../lib/database.js';
 import { linodeService } from '../services/linodeService.js';
 import { decryptSecret } from '../lib/crypto.js';
+import { RoleService } from '../services/roles.js';
 import { Client as SSHClient } from 'ssh2';
 import crypto from 'crypto';
 
@@ -82,6 +83,11 @@ router.post('/:id/ssh/connect', async (req: AuthenticatedRequest, res: Response)
   const user = req.user;
   if (!user?.id || !user.organizationId) {
     return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const hasVpsViewPermission = await RoleService.checkPermission(user.id, user.organizationId, 'vps_view');
+  if (!hasVpsViewPermission) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
   const instanceId = req.params.id;

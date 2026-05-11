@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/table";
 import Pagination from "@/components/ui/Pagination";
 import { useAuth } from "@/contexts/AuthContext";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 
 type OrganizationDialogMode = "create" | "edit";
 
@@ -738,33 +739,13 @@ export const OrganizationManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <Badge variant="secondary">Access & Organizations</Badge>
-            <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-              Organization Management
-            </h2>
-            <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
-              Create, rename, delete, and reorganize teams directly from the admin
-              dashboard.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={() => void fetchOrganizations(currentPage)}
-              disabled={loading}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-            </Button>
-            <Button onClick={openCreateDialog}>
-              <Plus className="mr-2 h-4 w-4" /> Create Organization
-            </Button>
-          </div>
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="Access & Organizations"
+        badgeIcon={Building2}
+        title="Organization Management"
+        description="Create, rename, delete, and reorganize teams directly from the admin dashboard."
+        decorativeIcon={Building2}
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-primary/25">

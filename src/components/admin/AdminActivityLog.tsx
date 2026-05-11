@@ -11,10 +11,12 @@ import {
   XCircle,
   Info,
   Building2,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -269,34 +271,13 @@ const AdminActivityLog: React.FC = () => {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-          <div className="relative z-10">
-            <div className="mb-2">
-              <Badge variant="secondary" className="mb-3">
-                Admin
-              </Badge>
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Activity Log
-            </h1>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Global audit trail — view and export all platform activity across all organizations.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button size="lg" onClick={exportCsv}>
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-            </div>
-          </div>
-
-          {/* Background decoration */}
-          <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-            <ActivityIcon className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-            <Clock className="absolute bottom-10 right-20 h-24 w-24 -rotate-6" />
-          </div>
-        </div>
+        <AdminHeroCard
+          badge="audit.tail"
+          badgeIcon={ScrollText}
+          title="Activity Log"
+          description="Global audit trail — view and export all platform activity across all organizations."
+          decorativeIcon={ScrollText}
+        />
 
         {/* Key Metrics Grid */}
         <div className="grid gap-4 md:grid-cols-3">

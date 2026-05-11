@@ -53,6 +53,7 @@ Detailed documentation is organized in the [`git-docs/`](./git-docs/) directory:
 | [Development](./git-docs/DEVELOPMENT.md) | Prerequisites, quick start, environment variables, icons/logo, dev commands |
 | [Deployment](./git-docs/DEPLOYMENT.md) | Production architecture, PM2, CDN config, health check, maintenance |
 | [Testing](./git-docs/TESTING.md) | Test stack, test locations, running tests, manual testing checklist |
+| [CLI Toolkit](./git-docs/CLI.md) | Admin CLI tool — user management, billing, VPS, hosting, org, ticket commands |
 | [Project Structure](./git-docs/PROJECT_STRUCTURE.md) | Full directory tree |
 
 ### Additional References
@@ -125,6 +126,11 @@ npm run dev            # Frontend (5173) + Backend (3001)
 | **Production** | `npm run pm2:start` | Build and start with PM2 |
 | | `npm run pm2:reload` | Graceful PM2 reload |
 | | `npm run pm2:stop` | Stop PM2 processes |
+| **CLI** | `node cli/skypanel.mjs --help` | Admin CLI toolkit (users, billing, VPS, orgs, tickets, hosting) |
+| | `node cli/skypanel.mjs user list` | List/search users |
+| | `node cli/skypanel.mjs admin unlock <email>` | Clear brute-force lockout |
+| | `node cli/skypanel.mjs billing balance <org>` | Check org wallet balance |
+| | `node cli/skypanel.mjs vps list` | List VPS instances |
 | **Utilities** | `npm run kill-ports` | Kill ports 3001, 5173, 8000 |
 | | `npm run pwa:icons` | Generate PWA icons |
 

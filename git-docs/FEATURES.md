@@ -171,34 +171,35 @@ Complete feature inventory for SkyPanelV2 — VPS management, web hosting, billi
 
 ### Predefined Roles & Permissions
 
-Seven predefined roles control access across 19 granular permissions. Orgs can also create custom roles via the role wizard.
+Eight predefined roles control access across 19 granular permissions. Orgs can also create custom roles via the role wizard.
 
-| Permission | owner | admin | member | vps_manager | hosting_manager | support_agent | viewer |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| `vps_view` | Y | Y | Y | Y | — | — | Y |
-| `vps_create` | Y | Y | Y | Y | — | — | — |
-| `vps_delete` | Y | Y | — | — | — | — | — |
-| `vps_manage` | Y | Y | Y | Y | — | — | — |
-| `notes_view` | Y | Y | Y | Y | Y | Y | Y |
-| `notes_manage` | Y | Y | Y | — | — | — | — |
-| `ssh_keys_view` | Y | Y | Y | Y | Y | — | — |
-| `ssh_keys_manage` | Y | Y | — | Y | — | — | — |
-| `tickets_view` | Y | Y | Y | — | Y | Y | Y |
-| `tickets_create` | Y | Y | Y | — | Y | Y | — |
-| `tickets_manage` | Y | Y | — | — | — | Y | — |
-| `billing_view` | Y | Y | Y | — | Y | — | — |
-| `billing_manage` | Y | — | — | — | — | — | — |
-| `egress_view` | Y | Y | Y | — | Y | — | — |
-| `egress_manage` | Y | — | — | — | — | — | — |
-| `members_manage` | Y | — | — | — | — | — | — |
-| `settings_manage` | Y | Y | — | — | — | — | — |
-| `hosting_view` | Y | Y | Y | — | Y | Y | Y |
-| `hosting_manage` | Y | Y | Y | — | Y | — | — |
+| Permission | owner | admin | billing_manager | member | vps_manager | hosting_manager | support_agent | viewer |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `vps_view` | Y | Y | — | Y | Y | — | — | Y |
+| `vps_create` | Y | Y | — | Y | Y | — | — | — |
+| `vps_delete` | Y | Y | — | — | — | — | — | — |
+| `vps_manage` | Y | Y | — | Y | Y | — | — | — |
+| `notes_view` | Y | Y | Y | Y | Y | Y | Y | Y |
+| `notes_manage` | Y | Y | — | Y | — | — | — | — |
+| `ssh_keys_view` | Y | Y | — | Y | Y | Y | — | — |
+| `ssh_keys_manage` | Y | Y | — | — | Y | — | — | — |
+| `tickets_view` | Y | Y | Y | Y | — | Y | Y | Y |
+| `tickets_create` | Y | Y | Y | Y | — | Y | Y | — |
+| `tickets_manage` | Y | Y | — | — | — | — | Y | — |
+| `billing_view` | Y | Y | Y | Y | — | Y | — | — |
+| `billing_manage` | Y | Y | Y | — | — | — | — | — |
+| `egress_view` | Y | Y | Y | Y | — | Y | — | — |
+| `egress_manage` | Y | Y | Y | — | — | — | — | — |
+| `members_manage` | Y | Y | — | — | — | — | — | — |
+| `settings_manage` | Y | Y | — | — | — | — | — | — |
+| `hosting_view` | Y | Y | Y | Y | — | Y | Y | Y |
+| `hosting_manage` | Y | Y | — | Y | — | Y | — | — |
 
 | Role | Permissions | Purpose |
 |---|---|---|
 | `owner` | 19/19 | Full access to everything |
-| `admin` | 16/19 | All except `billing_manage`, `egress_manage`, `members_manage` |
+| `admin` | 19/19 | Full organization administration, including billing, egress, and members |
+| `billing_manager` | 8/19 | Billing, invoices, hosting visibility, egress credit management, and support ticket creation |
 | `member` | 12/19 | General day-to-day operator — VPS + hosting, no destructive ops |
 | `vps_manager` | 6/19 | Linode VPS only — no hosting, no egress |
 | `hosting_manager` | 8/19 | Enhance hosting only — no VPS |

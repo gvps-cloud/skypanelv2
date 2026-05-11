@@ -1,6 +1,6 @@
 import React from "react";
 import { Globe } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,23 +31,13 @@ export const AdminNetworkingSection: React.FC<AdminNetworkingSectionProps> = ({
 }) => {
   return (
     <>
-      <div className="relative mb-6 overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3">
-            Network Configuration
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Networking Controls
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Configure reverse DNS defaults and IP address management settings
-          </p>
-        </div>
-
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Globe className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="net.fabric"
+        badgeIcon={Globe}
+        title="Networking Controls"
+        description="Configure reverse DNS defaults and IP address management settings"
+        decorativeIcon={Globe}
+      />
 
       <Card className="border-primary/25">
         <CardHeader>

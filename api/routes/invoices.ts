@@ -12,6 +12,7 @@ import { PayPalService, type WalletTransaction } from '../services/paypalService
 import { query } from '../lib/database.js';
 import { themeService, resolveThemePalette } from '../services/themeService.js';
 import { config } from '../config/index.js';
+import { RoleService } from '../services/roles.js';
 
 const router = express.Router();
 
@@ -25,6 +26,24 @@ type AuthenticatedRequest = Request & {
     organizationId: string;
     [key: string]: unknown;
   };
+};
+
+type BillingPermission = 'billing_view' | 'billing_manage';
+
+const getBillingContext = async (
+  req: Request,
+  res: Response,
+  permission: BillingPermission,
+): Promise<{ userId: string; organizationId: string } | null> => {
+  const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+  const hasPermission = await RoleService.checkPermission(userId, organizationId, permission);
+
+  if (!hasPermission) {
+    res.status(403).json({ success: false, error: 'Insufficient permissions' });
+    return null;
+  }
+
+  return { userId, organizationId };
 };
 
 // Apply authentication middleware to all routes
@@ -57,7 +76,10 @@ router.get(
         });
       }
 
-  const organizationId = (req as AuthenticatedRequest).user.organizationId;
+      const billingContext = await getBillingContext(req, res, 'billing_view');
+      if (!billingContext) return;
+      const { organizationId } = billingContext;
+
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
@@ -105,7 +127,9 @@ router.get(
       }
 
       const { id } = req.params;
-  const organizationId = (req as AuthenticatedRequest).user.organizationId;
+      const billingContext = await getBillingContext(req, res, 'billing_view');
+      if (!billingContext) return;
+      const { organizationId } = billingContext;
 
       const invoice = await InvoiceService.getInvoice(id, organizationId);
 
@@ -154,7 +178,9 @@ router.get(
       }
 
       const { id } = req.params;
-  const organizationId = (req as AuthenticatedRequest).user.organizationId;
+      const billingContext = await getBillingContext(req, res, 'billing_view');
+      if (!billingContext) return;
+      const { organizationId } = billingContext;
 
       const invoice = await InvoiceService.getInvoice(id, organizationId);
 
@@ -207,8 +233,10 @@ router.post(
         });
       }
 
-  const organizationId = (req as AuthenticatedRequest).user.organizationId;
-      const userId = (req as AuthenticatedRequest).user.id;
+      const billingContext = await getBillingContext(req, res, 'billing_manage');
+      if (!billingContext) return;
+      const { organizationId, userId } = billingContext;
+
       const transactionId = req.params.transactionId;
 
       // Get the specific transaction
@@ -318,8 +346,9 @@ router.post(
   requireOrganization,
   async (req: Request, res: Response) => {
     try {
-  const organizationId = (req as AuthenticatedRequest).user.organizationId;
-      const userId = (req as AuthenticatedRequest).user.id;
+      const billingContext = await getBillingContext(req, res, 'billing_manage');
+      if (!billingContext) return;
+      const { organizationId, userId } = billingContext;
       const invoiceNumber = `INV-${Date.now()}`;
 
       // Get recent transactions for this organization
@@ -436,8 +465,9 @@ router.post(
         });
       }
 
-      const organizationId = (req as AuthenticatedRequest).user.organizationId;
-      const userId = (req as AuthenticatedRequest).user.id;
+      const billingContext = await getBillingContext(req, res, 'billing_manage');
+      if (!billingContext) return;
+      const { organizationId, userId } = billingContext;
       const invoiceNumber = `INV-SVC-${Date.now()}`;
 
       const endDate = req.query.endDate
@@ -629,8 +659,9 @@ router.post(
         });
       }
 
-      const organizationId = (req as AuthenticatedRequest).user.organizationId;
-      const userId = (req as AuthenticatedRequest).user.id;
+      const billingContext = await getBillingContext(req, res, 'billing_manage');
+      if (!billingContext) return;
+      const { organizationId, userId } = billingContext;
       const invoiceNumber = `INV-HOST-${Date.now()}`;
       const subscriptionId = req.body.subscriptionId as string | undefined;
       const endDate = req.body.endDate ? new Date(req.body.endDate) : new Date();

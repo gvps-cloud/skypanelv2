@@ -248,6 +248,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             isActive: [
               "platform",
               "feature-toggles",
+              "security-controls",
               "rate-limiting",
               "activity-log",
               "fraud-protection",
@@ -260,9 +261,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
                 url: `/admin#feature-toggles`,
                 isActive: activeAnchor === "feature-toggles",
               },
-              { title: "Rate Limiting", url: `/admin#rate-limiting`, isActive: activeAnchor === "rate-limiting" },
+              {
+                title: "Security Controls",
+                url: `/admin#security-controls`,
+                isActive: ["security-controls", "rate-limiting", "fraud-protection"].includes(activeAnchor),
+              },
               { title: "Activity Log", url: `/admin#activity-log`, isActive: activeAnchor === "activity-log" },
-              { title: "Fraud Protection", url: `/admin#fraud-protection`, isActive: activeAnchor === "fraud-protection" },
               { title: "Maintenance", url: `/admin#maintenance`, isActive: activeAnchor === "maintenance" },
             ],
           },

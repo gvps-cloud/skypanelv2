@@ -45,6 +45,8 @@ import {
 } from '@/components/ui/table';
 import EgressPackSettings from './EgressPackSettings';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AdminHeroCard } from '@/components/admin/AdminHeroCard';
+import { ArrowUpDown } from 'lucide-react';
 
 interface Organization {
   id: string;
@@ -298,6 +300,13 @@ const EgressCreditManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <AdminHeroCard
+        badge="billing.egress"
+        badgeIcon={ArrowUpDown}
+        title="Egress Credits"
+        description="Manage prepaid egress bandwidth credit packs for organizations"
+        decorativeIcon={ArrowUpDown}
+      />
       <Tabs defaultValue="organizations" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="organizations" className="flex items-center gap-2">

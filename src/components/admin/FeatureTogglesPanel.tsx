@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, Globe, Server, AlertTriangle } from "lucide-react";
+import { Loader2, Globe, Server, AlertTriangle, ToggleLeft } from "lucide-react";
 import { toast } from "sonner";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 
 export function FeatureTogglesPanel() {
   const queryClient = useQueryClient();
@@ -60,6 +61,13 @@ export function FeatureTogglesPanel() {
 
   return (
     <div className="space-y-6">
+      <AdminHeroCard
+        badge="ops.features"
+        badgeIcon={ToggleLeft}
+        title="Feature Toggles"
+        description="Enable or disable platform features for all users"
+        decorativeIcon={ToggleLeft}
+      />
       <div>
         <h2 className="text-xl font-semibold">Feature toggles</h2>
         <p className="text-sm text-muted-foreground">

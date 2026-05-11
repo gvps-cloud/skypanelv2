@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, RefreshCw, DollarSign } from "lucide-react";
+import { Loader2, RefreshCw, DollarSign, Receipt } from "lucide-react";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 
@@ -48,6 +49,13 @@ export function RefundList() {
 
   return (
     <div className="space-y-4">
+      <AdminHeroCard
+        badge="billing.refunds"
+        badgeIcon={Receipt}
+        title="Refund Management"
+        description="Review and process refund requests from customers"
+        decorativeIcon={Receipt}
+      />
       <div className="flex items-center gap-2">
         <Input
           placeholder="Filter by status (pending, processing, completed, failed, cancelled)"

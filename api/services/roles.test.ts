@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RoleService, PREDEFINED_ROLES } from './roles.js';
+import { ALL_PERMISSIONS, RoleService, PREDEFINED_ROLES } from './roles.js';
 
 describe('RoleService', () => {
   describe('PREDEFINED_ROLES', () => {
@@ -9,6 +9,13 @@ describe('RoleService', () => {
 
     it('should include the hosting_manager role', () => {
       expect(PREDEFINED_ROLES).toHaveProperty('hosting_manager');
+    });
+
+    it('should include the billing_manager role', () => {
+      expect(PREDEFINED_ROLES).toHaveProperty('billing_manager');
+      expect(PREDEFINED_ROLES.billing_manager).toContain('billing_view');
+      expect(PREDEFINED_ROLES.billing_manager).toContain('billing_manage');
+      expect(PREDEFINED_ROLES.billing_manager).toContain('egress_manage');
     });
 
     it('member should have hosting_manage permission', () => {
@@ -49,13 +56,28 @@ describe('RoleService', () => {
       expect(PREDEFINED_ROLES.support_agent).not.toContain('hosting_manage');
     });
 
-    it('should have exactly 7 predefined roles', () => {
-      expect(Object.keys(PREDEFINED_ROLES)).toHaveLength(7);
+    it('owner and admin should have every permission', () => {
+      expect([...PREDEFINED_ROLES.owner].sort()).toEqual([...ALL_PERMISSIONS].sort());
+      expect([...PREDEFINED_ROLES.admin].sort()).toEqual([...ALL_PERMISSIONS].sort());
+    });
+
+    it('should validate and parse permissions centrally', () => {
+      expect(RoleService.isValidPermission('hosting_manage')).toBe(true);
+      expect(RoleService.isValidPermission('not_real')).toBe(false);
+      expect(RoleService.parsePermissions('["billing_manage","not_real","hosting_view"]')).toEqual([
+        'billing_manage',
+        'hosting_view',
+      ]);
+    });
+
+    it('should have exactly 8 predefined roles', () => {
+      expect(Object.keys(PREDEFINED_ROLES)).toHaveLength(8);
     });
 
     it('should contain all expected roles', () => {
       expect(Object.keys(PREDEFINED_ROLES).sort()).toEqual([
         'admin',
+        'billing_manager',
         'hosting_manager',
         'member',
         'owner',

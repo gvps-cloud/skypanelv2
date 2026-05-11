@@ -26,54 +26,32 @@ router.get("/uptime-summary", async (req: Request, res: Response) => {
     const userId = user.id;
     const organizationId = user.organizationId;
 
-    // users that belong to an organization and have the `vps_view`
-    // permission can see every VPS in that organization; otherwise they only
-    // see their own personal instances (organization_id IS NULL).
-    const hasVpsViewPermission = await RoleService.checkPermission(
+    const hasPermission = await RoleService.checkPermission(
       userId,
       organizationId,
       "vps_view",
     );
-
-    let result;
-
-    if (hasVpsViewPermission) {
-      result = await query(
-        `SELECT
-            vi.id,
-            vi.label,
-            vi.status,
-            vi.created_at,
-            vi.last_billed_at,
-            vi.plan_id,
-            vp.base_price,
-            vp.markup_price,
-            vp.provider_plan_id
-          FROM vps_instances vi
-          LEFT JOIN vps_plans vp ON vi.plan_id::uuid = vp.id
-          WHERE vi.organization_id = $1
-          ORDER BY vi.created_at DESC`,
-        [organizationId],
-      );
-    } else {
-      result = await query(
-        `SELECT
-            vi.id,
-            vi.label,
-            vi.status,
-            vi.created_at,
-            vi.last_billed_at,
-            vi.plan_id,
-            vp.base_price,
-            vp.markup_price,
-            vp.provider_plan_id
-          FROM vps_instances vi
-          LEFT JOIN vps_plans vp ON vi.plan_id::uuid = vp.id
-          WHERE vi.organization_id IS NULL AND vi.created_by = $1
-          ORDER BY vi.created_at DESC`,
-        [userId],
-      );
+    if (!hasPermission) {
+      return res.status(403).json({ error: "Insufficient permissions" });
     }
+
+    const result = await query(
+      `SELECT
+          vi.id,
+          vi.label,
+          vi.status,
+          vi.created_at,
+          vi.last_billed_at,
+          vi.plan_id,
+          vp.base_price,
+          vp.markup_price,
+          vp.provider_plan_id
+        FROM vps_instances vi
+        LEFT JOIN vps_plans vp ON vi.plan_id::uuid = vp.id
+        WHERE vi.organization_id = $1
+        ORDER BY vi.created_at DESC`,
+      [organizationId],
+    );
 
     const instances = result.rows || [];
 

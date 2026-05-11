@@ -6,6 +6,8 @@ import { BillingTransactions } from './BillingTransactions';
 import { BillingInvoices } from './BillingInvoices';
 import { EgressBilling } from './EgressBilling';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { AdminHeroCard } from '@/components/admin/AdminHeroCard';
+import { Wallet } from 'lucide-react';
 
 interface BillingDashboardProps {
   filteredEgressPricing: any[];
@@ -52,14 +54,13 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
   return (
     <div className="space-y-6 p-6 pb-16">
-      <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Billing & Finance</h2>
-          <p className="text-muted-foreground">
-            Manage client billing, view financial reports, and handle transactions.
-          </p>
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="billing.ledger"
+        badgeIcon={Wallet}
+        title="Billing & Finance"
+        description="Manage client billing, view financial reports, and handle transactions"
+        decorativeIcon={Wallet}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>

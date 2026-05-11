@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import Pagination from "@/components/ui/Pagination";
 import RichTextEditor from "@/components/ui/rich-text-editor";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import {
   Collapsible,
   CollapsibleContent,
@@ -66,6 +67,7 @@ import {
   FileText,
   Tag,
   ChevronDown,
+  BookOpen,
 } from "lucide-react";
 
 interface BlogTag {
@@ -431,15 +433,13 @@ export function BlogPostManager() {
     <Card className="border-primary/25">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Blog Posts
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Create and manage blog posts for your public-facing blog.
-            </p>
-          </div>
+          <AdminHeroCard
+            badge="content.blog"
+            badgeIcon={BookOpen}
+            title="Blog Management"
+            description="Create, edit, and publish blog posts for your platform"
+            decorativeIcon={BookOpen}
+          />
           <Button onClick={openCreateDialog} className="gap-2">
             <Plus className="h-4 w-4" />
             New Post

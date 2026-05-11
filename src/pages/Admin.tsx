@@ -26,7 +26,6 @@ import {
   Server,
   ServerCog,
   Settings,
-  Shield,
   Trash2,
   Users,
   Tags,
@@ -45,7 +44,6 @@ import { EnhanceIntegrationCard } from "@/components/admin/EnhanceIntegrationCar
 import { FeatureTogglesPanel } from "@/components/admin/FeatureTogglesPanel";
 import { EnhancePlans } from "@/components/admin/EnhancePlans";
 import { UserHostingList } from "@/components/admin/UserHostingList";
-import { FraudCheckList } from "@/components/admin/FraudCheckList";
 import { RefundList } from "@/components/admin/RefundList";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
@@ -109,6 +107,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import { buildApiUrl } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
 import { formatCurrency as formatCurrencyDisplay } from "@/lib/formatters";
@@ -141,9 +140,9 @@ const EmailTemplatesManager = lazy(async () => {
   const mod = await import("@/components/admin/email/EmailTemplatesManager");
   return { default: mod.EmailTemplatesManager };
 });
-const RateLimitMonitoring = lazy(async () => {
-  const mod = await import("@/components/admin/rate-limit-monitoring");
-  return { default: mod.RateLimitMonitoring };
+const SecurityControls = lazy(async () => {
+  const mod = await import("@/components/admin/SecurityControls");
+  return { default: mod.SecurityControls };
 });
 const FAQItemManager = lazy(async () => {
   const mod = await import("@/components/admin/FAQItemManager");
@@ -220,7 +219,7 @@ type AdminSection =
   | "organizations"
   | "user-management"
   | "ssh-keys"
-  | "rate-limiting"
+  | "security-controls"
   | "faq-management"
   | "documentation"
   | "platform"
@@ -234,7 +233,6 @@ type AdminSection =
   | "enhance-hosting"
   | "enhance-plans"
   | "enhance-subscriptions"
-  | "fraud-protection"
   | "refunds"
   | "maintenance"
   | "blog-management"
@@ -264,7 +262,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "user-management",
   "ssh-keys",
   "egress-credits",
-  "rate-limiting",
+  "security-controls",
   "faq-management",
   "documentation",
   "platform",
@@ -277,7 +275,6 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "enhance-hosting",
   "enhance-plans",
   "enhance-subscriptions",
-  "fraud-protection",
   "refunds",
   "maintenance",
   "blog-management",
@@ -299,7 +296,7 @@ const ADMIN_SECTION_COMMANDS: Record<AdminSection, string> = {
   organizations: "orgs --list",
   "user-management": "iam --users",
   "ssh-keys": "iam --keys",
-  "rate-limiting": "sec --ratelimit",
+  "security-controls": "sec --controls",
   "faq-management": "content --faq",
   documentation: "content --docs",
   platform: "ops --platform",
@@ -313,7 +310,6 @@ const ADMIN_SECTION_COMMANDS: Record<AdminSection, string> = {
   "enhance-hosting": "hosting --enhance",
   "enhance-plans": "hosting --plans",
   "enhance-subscriptions": "hosting --subs",
-  "fraud-protection": "risk --fraud",
   refunds: "billing --refunds",
   maintenance: "ops --maint",
   "blog-management": "content --blog",
@@ -321,6 +317,19 @@ const ADMIN_SECTION_COMMANDS: Record<AdminSection, string> = {
 };
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
+const ADMIN_SECTION_ALIASES: Record<string, AdminSection> = {
+  "rate-limiting": "security-controls",
+  "fraud-protection": "security-controls",
+};
+
+function resolveAdminSection(value: string): AdminSection | null {
+  const normalized = value.toLowerCase();
+  const alias = ADMIN_SECTION_ALIASES[normalized];
+  if (alias) {
+    return alias;
+  }
+  return ADMIN_SECTIONS.includes(normalized as AdminSection) ? (normalized as AdminSection) : null;
+}
 const DEFAULT_NETWORKING_TAB: AdminNetworkingTab = "rdns";
 const ADMIN_NETWORKING_TABS: AdminNetworkingTab[] = [
   "rdns",
@@ -986,8 +995,8 @@ const Admin: React.FC = () => {
       return;
     }
 
-    const normalized = hashValueRaw.toLowerCase() as AdminSection;
-    if (!ADMIN_SECTIONS.includes(normalized)) {
+    const normalized = resolveAdminSection(hashValueRaw);
+    if (!normalized) {
       return;
     }
 
@@ -998,8 +1007,8 @@ const Admin: React.FC = () => {
 
   const handleTabChange = useCallback(
     (value: string) => {
-      const normalized = value.toLowerCase() as AdminSection;
-      if (!ADMIN_SECTIONS.includes(normalized)) {
+      const normalized = resolveAdminSection(value);
+      if (!normalized) {
         return;
       }
 
@@ -2283,7 +2292,7 @@ const Admin: React.FC = () => {
     { title: "Brand & Communications", ids: ["announcements", "email-templates"] },
     {
       title: "Platform & Audit",
-      ids: ["platform", "feature-toggles", "rate-limiting", "activity-log", "fraud-protection", "maintenance"],
+      ids: ["platform", "feature-toggles", "security-controls", "activity-log", "maintenance"],
     },
   ];
 
@@ -2456,89 +2465,72 @@ const Admin: React.FC = () => {
           {/* Integrated VPS Plans Section */}
           <div className="space-y-4">
             {/* Header with integrated filters */}
-            <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20">
-              <div className="relative z-10 p-4 sm:p-6 md:p-8">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-                  <div>
-                    <Badge variant="secondary" className="mb-3 text-xs">
-                      Infrastructure
-                    </Badge>
-                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                      VPS Plans
-                    </h2>
-                    <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
-                      Curate what customers see when provisioning infrastructure
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setShowAddVPSPlan(true)}
-                    className="gap-2 sm:self-start shrink-0"
+            <AdminHeroCard
+              badge="catalog.vps"
+              badgeIcon={ServerCog}
+              title="VPS Plans"
+              description="Curate what customers see when provisioning infrastructure"
+              decorativeIcon={ServerCog}
+              actions={
+                <Button onClick={() => setShowAddVPSPlan(true)} className="gap-2">
+                  <Plus className="h-4 w-4" /> Add VPS Plan
+                </Button>
+              }
+            />
+
+            <div className="grid gap-3 sm:grid-cols-2 bg-background/50 rounded-lg p-4 border">
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="plan-provider-filter"
+                  className="text-xs font-medium"
+                >
+                  Filter by Provider
+                </Label>
+                <Select
+                  value={planProviderFilter}
+                  onValueChange={setPlanProviderFilter}
+                >
+                  <SelectTrigger
+                    id="plan-provider-filter"
+                    className="w-full"
                   >
-                    <Plus className="h-4 w-4" /> Add VPS Plan
-                  </Button>
-                </div>
-
-                {/* Integrated Filters */}
-                <div className="grid gap-3 sm:grid-cols-2 bg-background/50 rounded-lg p-4 border">
-                  <div className="flex flex-col gap-2">
-                    <Label
-                      htmlFor="plan-provider-filter"
-                      className="text-xs font-medium"
-                    >
-                      Filter by Provider
-                    </Label>
-                    <Select
-                      value={planProviderFilter}
-                      onValueChange={setPlanProviderFilter}
-                    >
-                      <SelectTrigger
-                        id="plan-provider-filter"
-                        className="w-full"
-                      >
-                        <SelectValue placeholder="All providers" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Providers</SelectItem>
-                        {providers.map((provider) => (
-                          <SelectItem key={provider.id} value={provider.id}>
-                              {provider.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label
-                      htmlFor="plan-type-filter"
-                      className="text-xs font-medium"
-                    >
-                      Filter by Category
-                    </Label>
-                    <Select
-                      value={planTypeFilter}
-                      onValueChange={setPlanTypeFilter}
-                    >
-                      <SelectTrigger id="plan-type-filter" className="w-full">
-                        <SelectValue placeholder="All categories" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="dedicated">Dedicated</SelectItem>
-                        <SelectItem value="premium">Premium</SelectItem>
-                        <SelectItem value="gpu">GPU</SelectItem>
-                        <SelectItem value="accelerated">Accelerated</SelectItem>
-                        <SelectItem value="highmem">High Memory</SelectItem>
-                        <SelectItem value="nanode">Nanode</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                    <SelectValue placeholder="All providers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Providers</SelectItem>
+                    {providers.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                          {provider.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-
-              {/* Background decoration */}
-              <div className="absolute right-0 top-0 h-full w-1/3 opacity-5 pointer-events-none">
-                <DollarSign className="absolute right-4 sm:right-10 top-4 sm:top-10 h-20 w-20 sm:h-32 sm:w-32 rotate-12" />
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="plan-type-filter"
+                  className="text-xs font-medium"
+                >
+                  Filter by Category
+                </Label>
+                <Select
+                  value={planTypeFilter}
+                  onValueChange={setPlanTypeFilter}
+                >
+                  <SelectTrigger id="plan-type-filter" className="w-full">
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="dedicated">Dedicated</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="gpu">GPU</SelectItem>
+                    <SelectItem value="accelerated">Accelerated</SelectItem>
+                    <SelectItem value="highmem">High Memory</SelectItem>
+                    <SelectItem value="nanode">Nanode</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -3452,76 +3444,30 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="category-mappings" activeSection={activeTab}>
           {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
-            <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
-                White-Label
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
-                Category Mappings
-              </h2>
-              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
-                Customize how VPS plan categories appear to your customers with
-                branded names and descriptions.
-              </p>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Tags className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">
-                  White-label your infrastructure offerings
-                </span>
-              </div>
-            </div>
-            <Tags className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12 text-teal-600/20" />
-          </div>
+          <AdminHeroCard
+            badge="catalog.map"
+            badgeIcon={Tags}
+            title="Category Mappings"
+            description="Customize how VPS plan categories appear to your customers with branded names and descriptions"
+            decorativeIcon={Tags}
+          />
 
           <CategoryMappingManager />
         </SectionPanel>
 
-        <SectionPanel section="rate-limiting" activeSection={activeTab}>
-          {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
-            <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
-                Security
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
-                Rate Limiting
-              </h2>
-              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
-                Monitor and manage API rate limits across the platform
-              </p>
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <Shield className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
-            </div>
-          </div>
-
-          <RateLimitMonitoring />
+        <SectionPanel section="security-controls" activeSection={activeTab}>
+          <SecurityControls />
         </SectionPanel>
 
         <SectionPanel section="faq-management" activeSection={activeTab}>
           {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
-            <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
-                Support
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
-                FAQ Management
-              </h2>
-              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
-                Manage FAQ categories, items, and latest updates for the public
-                FAQ page
-              </p>
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <HelpCircle className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
-            </div>
-          </div>
+          <AdminHeroCard
+            badge="content.faq"
+            badgeIcon={HelpCircle}
+            title="FAQ Management"
+            description="Manage FAQ categories, items, and latest updates for the public FAQ page"
+            decorativeIcon={HelpCircle}
+          />
 
           <div className="space-y-6">
             <CategoryManager token={token || ""} />
@@ -3536,18 +3482,13 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="platform" activeSection={activeTab}>
           <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <Settings className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  Platform Settings
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Configure platform-wide settings including availability
-                  schedules and general configuration.
-                </p>
-              </div>
-            </div>
+            <AdminHeroCard
+              badge="ops.platform"
+              badgeIcon={Settings}
+              title="Platform Settings"
+              description="Configure platform-wide settings including availability schedules and general configuration"
+              decorativeIcon={Settings}
+            />
 
             <Tabs defaultValue="availability" className="space-y-6">
               <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:w-auto lg:inline-grid">
@@ -3609,23 +3550,13 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="volume-pricing" activeSection={activeTab}>
           <div className="space-y-4">
-            <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20">
-              <div className="relative z-10 p-4 sm:p-6 md:p-8">
-                <Badge variant="secondary" className="mb-3 text-xs">
-                  Operations
-                </Badge>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                      Volume Pricing
-                    </h2>
-                    <p className="mt-2 max-w-3xl text-sm text-muted-foreground sm:text-base">
-                      Manage block storage pricing tiers and review all provisioned volumes in one place.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdminHeroCard
+              badge="billing.volume"
+              badgeIcon={HardDrive}
+              title="Volume Pricing"
+              description="Manage block storage pricing tiers and review all provisioned volumes in one place"
+              decorativeIcon={HardDrive}
+            />
 
             <VolumePricing />
           </div>
@@ -3655,18 +3586,6 @@ const Admin: React.FC = () => {
         <SectionPanel section="enhance-subscriptions" activeSection={activeTab}>
           <div className="space-y-6">
             <UserHostingList />
-          </div>
-        </SectionPanel>
-
-        <SectionPanel section="fraud-protection" activeSection={activeTab}>
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">Fraud Protection</h2>
-              <p className="text-sm text-muted-foreground">
-                Monitor and manage FraudLabs Pro fraud screening results
-              </p>
-            </div>
-            <FraudCheckList />
           </div>
         </SectionPanel>
 
@@ -3726,37 +3645,19 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="stackscripts" activeSection={activeTab}>
           {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-            <div className="relative z-10 flex items-start justify-between">
-              <div>
-                <Badge variant="secondary" className="mb-3">
-                  Automation
-                </Badge>
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                  StackScripts
-                </h2>
-                <p className="mt-2 max-w-2xl text-muted-foreground">
-                  Configure which scripts show up when provisioning new VPS
-                  instances
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchStackscriptsAndConfigs}
-                disabled={loadingStackscripts}
-                className="gap-2"
-              >
+          <AdminHeroCard
+            badge="infra.scripts"
+            badgeIcon={FileCode}
+            title="StackScripts"
+            description="Configure which scripts show up when provisioning new VPS instances"
+            decorativeIcon={FileCode}
+            actions={
+              <Button variant="outline" size="sm" onClick={fetchStackscriptsAndConfigs} disabled={loadingStackscripts} className="gap-2">
                 <RefreshCw className="h-4 w-4" />
                 {loadingStackscripts ? "Refreshing…" : "Refresh"}
               </Button>
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <FileCode className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-            </div>
-          </div>
+            }
+          />
 
           <Card className="border-primary/25">
             <CardHeader>

@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -286,41 +287,13 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <Badge variant="secondary" className="mb-3">
-              Communication
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Announcements
-            </h2>
-            <p className="mt-2 max-w-xl text-muted-foreground">
-              Broadcast messages across the platform to specific audiences. Control
-              visibility, scheduling, and dismissal behavior.
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              createForm.reset(EMPTY_FORM);
-              setShowCreateDialog(true);
-            }}
-            className="shrink-0"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Announcement
-          </Button>
-        </div>
-        <div className="relative z-10 mt-4 flex gap-4 text-sm text-muted-foreground">
-          <span>
-            <strong className="text-foreground">{announcements.length}</strong> total
-          </span>
-          <span>
-            <strong className="text-foreground">{activeCount}</strong> active
-          </span>
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="comms.broadcast"
+        badgeIcon={Megaphone}
+        title="Announcements"
+        description="Broadcast messages across the platform to specific audiences. Control visibility, scheduling, and dismissal behavior."
+        decorativeIcon={Megaphone}
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">

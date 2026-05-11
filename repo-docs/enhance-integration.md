@@ -108,6 +108,7 @@ Hosting operations are gated by two permissions:
 |---|---|---|
 | `owner` | ✅ | ✅ |
 | `admin` | ✅ | ✅ |
+| `billing_manager` | ✅ | — |
 | `member` | ✅ | ✅ |
 | `vps_manager` | — | — |
 | `hosting_manager` | ✅ | ✅ |

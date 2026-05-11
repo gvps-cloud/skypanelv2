@@ -164,9 +164,9 @@ router.get("/:id/networking/ipv6-rdns-records", async (req: Request, res: Respon
     const organizationId = user.organizationId;
 
     if (userRole !== "admin") {
-      const hasPermission = await RoleService.checkPermission(userId, organizationId, "vps_manage");
+      const hasPermission = await RoleService.checkPermission(userId, organizationId, "vps_view");
       if (!hasPermission) {
-        return res.status(403).json({ error: "Insufficient permissions", required: "vps_manage" });
+        return res.status(403).json({ error: "Insufficient permissions", required: "vps_view" });
       }
     }
 

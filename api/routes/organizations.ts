@@ -5,7 +5,7 @@ import { query } from '../lib/database.js';
 import { InvitationService } from '../services/invitations.js';
 import { ActivityFeedService } from '../services/activityFeed.js';
 import { EgressBillingService } from '../services/egressBillingService.js';
-import { RoleService } from '../services/roles.js';
+import { ALL_PERMISSIONS, PREDEFINED_ROLES, RoleService } from '../services/roles.js';
 import {
   getEgressCreditBalanceDetails,
   getEgressCreditPurchaseHistory,
@@ -23,6 +23,19 @@ const organizationMutationRateLimiter = createCustomRateLimiter({
   maxRequests: 80,
   userType: "authenticated",
 });
+
+const buildPermissionMap = (permissions: string[] = []) => {
+  const permissionMap: Record<string, boolean> = {};
+  ALL_PERMISSIONS.forEach((permission) => {
+    permissionMap[permission] = false;
+  });
+
+  permissions.forEach((permission) => {
+    if (permission in permissionMap) permissionMap[permission] = true;
+  });
+
+  return permissionMap;
+};
 
 // Middleware to check if user is system admin or org admin/owner
 const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -63,11 +76,9 @@ const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: 
 
     // Check if user has custom role with members_manage permission
     if (member.permissions) {
-      const permissions = typeof member.permissions === 'string' 
-        ? JSON.parse(member.permissions) 
-        : member.permissions;
+      const permissions = RoleService.parsePermissions(member.permissions);
       
-      if (permissions.members_manage === true) {
+      if (permissions.includes('members_manage')) {
         return next();
       }
     }
@@ -249,48 +260,20 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
     });
 
     const resources = orgs.map((org: any) => {
-      const permissions = {
-        vps_view: false, vps_create: false, vps_delete: false, vps_manage: false,
-        notes_view: true, notes_manage: false,
-        ssh_keys_view: false, ssh_keys_manage: false, tickets_view: false,
-        tickets_create: false, tickets_manage: false, billing_view: false,
-        billing_manage: false, egress_view: false, egress_manage: false,
-        members_manage: false, settings_manage: false,
-        hosting_view: false, hosting_manage: false
-      };
+      const permissions = buildPermissionMap();
 
       const member = allMembers.get(org.id);
       if (member) {
-        
-        if (member.permissions) {
-          const perms = Array.isArray(member.permissions) 
-            ? member.permissions 
-            : JSON.parse(member.permissions);
-          
-          perms.forEach((p: string) => {
-            if (p in permissions) (permissions as any)[p] = true;
-          });
-        }
+        const fallbackPerms = member.legacy_role === 'member'
+          ? memberRolePerms.get(org.id) || PREDEFINED_ROLES.member
+          : PREDEFINED_ROLES[member.legacy_role as keyof typeof PREDEFINED_ROLES] || [];
+        const effectivePerms = member.role_id
+          ? RoleService.parsePermissions(member.permissions)
+          : fallbackPerms;
 
-        if (member.legacy_role === 'owner') {
-          Object.keys(permissions).forEach(key => (permissions as any)[key] = true);
-        } else if (member.legacy_role === 'admin') {
-          ['vps_view', 'vps_create', 'vps_delete', 'vps_manage',
-           'notes_view', 'notes_manage',
-           'ssh_keys_view', 'ssh_keys_manage',
-           'tickets_view', 'tickets_create', 'tickets_manage',
-           'billing_view', 'egress_view', 'settings_manage',
-           'hosting_view', 'hosting_manage'].forEach(p => {
-             if (p in permissions) (permissions as any)[p] = true;
-           });
-        } else if (member.legacy_role === 'member') {
-          const perms = memberRolePerms.get(org.id);
-          if (perms) {
-            perms.forEach((p: string) => {
-              if (p in permissions) (permissions as any)[p] = true;
-            });
-          }
-        }
+        effectivePerms.forEach((p: string) => {
+          if (p in permissions) (permissions as any)[p] = true;
+        });
       }
 
       return {
@@ -1237,11 +1220,9 @@ router.delete('/invitations/:id', async (req: AuthenticatedRequest, res: Respons
     const hasAdminRole = roleName === 'owner' || roleName === 'admin';
 
     // Check if user has custom role with members_manage permission
-    const hasMembersManagePermission = member.permissions && (
-      typeof member.permissions === 'string'
-        ? JSON.parse(member.permissions).members_manage === true
-        : member.permissions.members_manage === true
-    );
+    const hasMembersManagePermission = RoleService
+      .parsePermissions(member.permissions)
+      .includes('members_manage');
 
     if (!hasAdminRole && !hasMembersManagePermission) {
       return res.status(403).json({ error: 'Access denied' });
@@ -1308,18 +1289,7 @@ router.post('/:id/roles', requireOrgAccess, async (req: AuthenticatedRequest, re
     return res.status(400).json({ error: 'Permissions must be an array' });
   }
 
-  const validPermissions = [
-    'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
-    'notes_view', 'notes_manage',
-    'ssh_keys_view', 'ssh_keys_manage',
-    'tickets_view', 'tickets_create', 'tickets_manage',
-    'billing_view', 'billing_manage',
-    'egress_view', 'egress_manage',
-    'members_manage', 'settings_manage',
-    'hosting_view', 'hosting_manage'
-  ];
-
-  const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
+  const invalidPermissions = permissions.filter(p => !RoleService.isValidPermission(p));
   if (invalidPermissions.length > 0) {
     return res.status(400).json({ 
       error: `Invalid permissions: ${invalidPermissions.join(', ')}` 
@@ -1372,16 +1342,7 @@ router.put('/:id/roles/:roleId', requireOrgAccess, async (req: AuthenticatedRequ
     }
 
     if (permissions) {
-      const validPermissions = [
-        'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
-        'notes_view', 'notes_manage',
-        'ssh_keys_view', 'ssh_keys_manage',
-        'tickets_view', 'tickets_create', 'tickets_manage',
-        'billing_view', 'billing_manage',
-        'members_manage', 'settings_manage'
-      ];
-
-      const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
+      const invalidPermissions = permissions.filter(p => !RoleService.isValidPermission(p));
       if (invalidPermissions.length > 0) {
         return res.status(400).json({ 
           error: `Invalid permissions: ${invalidPermissions.join(', ')}` 

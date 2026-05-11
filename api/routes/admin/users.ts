@@ -200,6 +200,9 @@ router.get(
         u.role,
         u.phone,
         u.timezone,
+        u.status,
+        u.status_reason,
+        u.status_updated_at,
         u.created_at,
         u.updated_at,
         COALESCE(
@@ -431,7 +434,7 @@ router.get(
 
       const detailedUser = {
         ...user,
-        status: "active",
+        status: user.status || "active",
         activity_summary: {
           vps_count: parseInt(vpsCountResult.rows[0]?.vps_count || "0"),
           last_activity: lastActivity,
@@ -1416,6 +1419,143 @@ router.post(
   "/impersonation/exit",
   authenticateToken,
   handleAdminImpersonationExit,
+);
+
+router.put(
+  "/:id/status",
+  authenticateToken,
+  requireAdmin,
+  [
+    param("id").isUUID().withMessage("Invalid user id"),
+    body("status")
+      .isIn(["active", "inactive", "suspended"])
+      .withMessage("Status must be active, inactive, or suspended"),
+    body("reason").optional().isString().trim(),
+  ],
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id } = req.params;
+      const { status, reason } = req.body as { status: string; reason?: string };
+
+      const userCheck = await query(
+        "SELECT id, email, name, role, status AS current_status FROM users WHERE id = $1",
+        [id],
+      );
+
+      if (userCheck.rows.length === 0) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      const user = userCheck.rows[0];
+
+      if (user.role === "admin") {
+        res.status(403).json({ error: "Cannot change status of admin users" });
+        return;
+      }
+
+      if (user.current_status === status) {
+        res.json({
+          message: `User is already ${status}`,
+          user: { id: user.id, email: user.email, status },
+        });
+        return;
+      }
+
+      await query(
+        `UPDATE users SET status = $1, status_reason = $2, status_updated_at = $3, updated_at = $3 WHERE id = $4`,
+        [status, reason || null, new Date().toISOString(), id],
+      );
+
+      if (req.user?.id) {
+        await logActivity(
+          {
+            userId: req.user.id,
+            organizationId: req.user.organizationId ?? null,
+            eventType: status === "suspended" ? "user.suspended" : "user.activated",
+            entityType: "user",
+            entityId: id,
+            message: `${status === "suspended" ? "Suspended" : "Activated"} user "${user.email}"${reason ? `: ${reason}` : ""}`,
+            status: "warning",
+            metadata: {
+              previousStatus: user.current_status,
+              newStatus: status,
+              reason: reason || null,
+              targetEmail: user.email,
+            },
+          },
+          req,
+        );
+      }
+
+      res.json({
+        message: `User status updated to ${status}`,
+        user: { id: user.id, email: user.email, status, reason },
+      });
+    } catch (err: any) {
+      console.error("Admin user status update error:", err);
+      res.status(500).json({ error: err.message || "Failed to update user status" });
+    }
+  },
+);
+
+router.post(
+  "/:id/unlock",
+  authenticateToken,
+  requireAdmin,
+  [param("id").isUUID().withMessage("Invalid user id")],
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id } = req.params;
+
+      const userCheck = await query(
+        "SELECT id, email, name FROM users WHERE id = $1",
+        [id],
+      );
+
+      if (userCheck.rows.length === 0) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      const user = userCheck.rows[0];
+      const { bruteForceProtectionService } = await import("../../services/bruteForceProtectionService.js");
+      await bruteForceProtectionService.resetByEmail(user.email);
+
+      if (req.user?.id) {
+        await logActivity(
+          {
+            userId: req.user.id,
+            organizationId: req.user.organizationId ?? null,
+            eventType: "user.unlocked",
+            entityType: "user",
+            entityId: id,
+            message: `Unlocked user "${user.email}" (cleared brute force lockout)`,
+            status: "success",
+            metadata: { targetEmail: user.email },
+          },
+          req,
+        );
+      }
+
+      res.json({ message: `Lockout cleared for ${user.email}` });
+    } catch (err: any) {
+      console.error("Admin user unlock error:", err);
+      res.status(500).json({ error: err.message || "Failed to unlock user" });
+    }
+  },
 );
 
 export default router;

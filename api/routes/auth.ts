@@ -191,6 +191,22 @@ router.post(
 
         const loginResult = result as { user: any; token: string };
 
+        // Check account status (admins are never suspended)
+        if (loginResult.user?.role !== 'admin') {
+          const statusResult = await query(
+            'SELECT status FROM users WHERE id = $1',
+            [loginResult.user.id]
+          );
+          const userStatus = statusResult.rows[0]?.status;
+          if (userStatus && userStatus !== 'active') {
+            res.status(403).json({
+              error: 'Account suspended',
+              message: 'Your account has been suspended. Please contact support.',
+            });
+            return;
+          }
+        }
+
         // Credentials verified — reset brute-force counters before maintenance gating
         // so valid users are not locked out by repeated maintenance/bypass 403s.
         await bruteForceProtectionService.resetAttempts(clientIP, email);

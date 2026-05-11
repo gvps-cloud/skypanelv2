@@ -29,6 +29,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -236,27 +237,17 @@ export const AdminProvidersSection: React.FC<AdminProvidersSectionProps> = ({
 
   return (
     <>
-      <div className="relative mb-6 overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <Badge variant="secondary" className="mb-3">
-              Infrastructure
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Service Providers
-            </h2>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Manage infrastructure provider credentials and access control
-            </p>
-          </div>
-          <Button onClick={() => setShowAddProvider(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Add Provider
-          </Button>
-        </div>
-
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Settings className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
+      <div className="relative z-10 mb-6 flex items-start justify-between">
+        <AdminHeroCard
+          badge="infra.providers"
+          badgeIcon={Settings}
+          title="Service Providers"
+          description="Manage infrastructure provider credentials and access control"
+          decorativeIcon={Settings}
+        />
+        <Button onClick={() => setShowAddProvider(true)} className="gap-2">
+          <Plus className="h-4 w-4" /> Add Provider
+        </Button>
       </div>
 
       <Card className="border-primary/25">

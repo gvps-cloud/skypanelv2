@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, FolderOpen } from "lucide-react";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import DocumentationCategoryManager from "./DocumentationCategoryManager";
 import DocumentationArticleManager from "./DocumentationArticleManager";
 
@@ -9,14 +10,13 @@ export default function DocumentationManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Documentation</h2>
-          <p className="text-muted-foreground">
-            Manage documentation categories and articles for your clients.
-          </p>
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="content.docs"
+        badgeIcon={BookOpen}
+        title="Documentation Manager"
+        description="Create and manage platform documentation pages"
+        decorativeIcon={BookOpen}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

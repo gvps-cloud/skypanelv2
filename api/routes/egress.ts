@@ -81,7 +81,13 @@ router.use((req: Request, res: Response, next: NextFunction) => {
  */
 router.get("/credits", requireOrganization, async (req: Request, res: Response) => {
   try {
-    const { organizationId } = (req as AuthenticatedRequest).user;
+    const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+    const hasPermission = await RoleService.checkPermission(userId, organizationId, 'egress_view');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     const balanceDetails = await getEgressCreditBalanceDetails(organizationId);
 
     res.json({
@@ -101,8 +107,15 @@ router.get("/credits", requireOrganization, async (req: Request, res: Response) 
  * GET /api/egress/credits/packs
  * Get available credit packs for purchase
  */
-router.get("/credits/packs", async (req: Request, res: Response) => {
+router.get("/credits/packs", requireOrganization, async (req: Request, res: Response) => {
   try {
+    const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+    const hasPermission = await RoleService.checkPermission(userId, organizationId, 'egress_view');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     const packs = await getAvailableCreditPacks();
 
     res.json({
@@ -135,6 +148,13 @@ router.post(
   ],
   async (req: Request, res: Response) => {
     try {
+      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+      const hasPermission = await RoleService.checkPermission(userId, organizationId, 'egress_manage');
+      if (!hasPermission) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -145,7 +165,6 @@ router.post(
       }
 
       const { packId } = req.body;
-      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
 
       // Get available packs from database configuration
       const packs = await getAvailableCreditPacks();
@@ -210,7 +229,12 @@ router.post(
  */
 router.get("/credits/wallet-balance", requireOrganization, async (req: Request, res: Response) => {
   try {
-    const { organizationId } = (req as AuthenticatedRequest).user;
+    const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+    const hasPermission = await RoleService.checkPermission(userId, organizationId, 'egress_view');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
 
     const walletResult = await dbQuery(
       'SELECT balance FROM wallets WHERE organization_id = $1',
@@ -250,6 +274,13 @@ router.post(
   ],
   async (req: Request, res: Response) => {
     try {
+      const { id: userId, organizationId: userOrgId } = (req as AuthenticatedRequest).user;
+
+      const hasPermission = await RoleService.checkPermission(userId, userOrgId, 'egress_manage');
+      if (!hasPermission) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -260,10 +291,8 @@ router.post(
       }
 
       const { organizationId, packId } = req.body;
-      const { id: userId } = (req as AuthenticatedRequest).user;
 
       // Verify the user belongs to this organization
-      const { organizationId: userOrgId } = (req as AuthenticatedRequest).user;
       if (userOrgId !== organizationId) {
         return res.status(403).json({
           success: false,
@@ -468,7 +497,13 @@ router.post(
  */
 router.get("/credits/history", requireOrganization, async (req: Request, res: Response) => {
   try {
-    const { organizationId } = (req as AuthenticatedRequest).user;
+    const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+    const hasPermission = await RoleService.checkPermission(userId, organizationId, 'egress_view');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
     const page = typeof req.query.page === "string" ? parseInt(req.query.page, 10) : 1;
     const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 5;
 
@@ -513,7 +548,12 @@ router.get(
       }
 
       const { vpsId } = req.params;
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+      const hasPermission = await RoleService.checkPermission(userId, organizationId, 'egress_view');
+      if (!hasPermission) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
 
       // Verify VPS belongs to user's organization
       const vpsResult = await dbQuery(
@@ -569,7 +609,12 @@ router.get(
       }
 
       const { vpsId } = req.params;
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+      const hasPerm = await RoleService.checkPermission(userId, organizationId, 'egress_view');
+      if (!hasPerm) {
+        return res.status(403).json({ error: 'Insufficient permissions' });
+      }
 
       // Verify VPS belongs to user's organization
       const vpsResult = await dbQuery(

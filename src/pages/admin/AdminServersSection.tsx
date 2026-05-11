@@ -14,6 +14,7 @@ import {
 const LazySSHTerminal = lazy(() =>
   import("@/components/VPS/SSHTerminal").then((m) => ({ default: m.SSHTerminal })),
 );
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,35 +153,13 @@ export const AdminServersSection: React.FC<AdminServersSectionProps> = ({
 }) => {
   return (
     <>
-      <div className="relative mb-6 overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <Badge variant="secondary" className="mb-3">
-              Infrastructure
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              VPS Servers
-            </h2>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Monitor and manage all VPS instances provisioned through the platform
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={onRefresh}
-            disabled={serversLoading}
-          >
-            <RefreshCw className="h-4 w-4" />
-            {serversLoading ? "Refreshing…" : "Refresh"}
-          </Button>
-        </div>
-
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <ServerCog className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="infra.servers"
+        badgeIcon={ServerCog}
+        title="VPS Servers"
+        description="Monitor and manage all VPS instances provisioned through the platform"
+        decorativeIcon={ServerCog}
+      />
 
       <Card className="border-primary/25">
         <CardHeader>

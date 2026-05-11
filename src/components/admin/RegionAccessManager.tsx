@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RefreshCw, MapPin, ShieldCheck } from "lucide-react";
+import { RefreshCw, MapPin, ShieldCheck, Map } from "lucide-react";
 import { toast } from "sonner";
 
 import { apiClient } from "@/lib/api";
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { AdminHeroCard } from "@/components/admin/AdminHeroCard";
 
 interface RegionAccessManagerProps {
   token: string;
@@ -287,25 +288,13 @@ export const RegionAccessManager: React.FC<RegionAccessManagerProps> = ({ token 
 
   return (
     <div className="space-y-6">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3">
-            Infrastructure
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Region Controls
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Choose which data center regions are available for VPS provisioning
-          </p>
-        </div>
-        
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <MapPin className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
+      <AdminHeroCard
+        badge="infra.regions"
+        badgeIcon={Map}
+        title="Region Management"
+        description="Configure available regions and their labels for VPS provisioning"
+        decorativeIcon={Map}
+      />
 
       <Card className="border-primary/25">
         <CardHeader className="flex flex-row items-center justify-between">

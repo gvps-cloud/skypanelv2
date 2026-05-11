@@ -139,6 +139,11 @@ router.post(
       }
       const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
 
+      const hasPermission = await RoleService.checkPermission(userId, organizationId, 'billing_manage');
+      if (!hasPermission) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
+
       // FraudLabsPro screening on wallet top-up
       const fraudResult = await FraudLabsProService.screen({
         ip: getClientIP(req).ip,
@@ -726,7 +731,13 @@ router.get(
         });
       }
 
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
+
+      const hasBilling = await RoleService.checkPermission(userId, organizationId, 'billing_view');
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
+
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string;
@@ -788,8 +799,14 @@ router.get(
         });
       }
 
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
+
+      const hasBilling = await RoleService.checkPermission(userId, organizationId, 'billing_view');
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
+
       const transactionId = req.params.id;
-      const { organizationId } = (req as AuthenticatedRequest).user;
 
       const result = await dbQuery(
         `SELECT id, organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, status, description, metadata, created_at, updated_at
@@ -888,6 +905,11 @@ router.post(
 
       const { email, amount, currency, reason } = req.body;
       const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+      const hasPermission = await RoleService.checkPermission(userId, organizationId, 'billing_manage');
+      if (!hasPermission) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
 
       // Check if organization has sufficient funds
       const balance = await PayPalService.getWalletBalance(organizationId);

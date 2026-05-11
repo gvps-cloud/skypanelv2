@@ -1094,6 +1094,42 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/rate-limits/accounts/search",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/rate-limits/ip-activity",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/rate-limits/ip-activity/:ip/events",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/rate-limits/ip-rules",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/rate-limits/ip-rules",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/rate-limits/ip-rules/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/rate-limits/overrides",
     "protected": true,
     "admin": true

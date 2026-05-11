@@ -803,8 +803,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       },
       {
         icon: Activity,
-        label: "Rate Limiting",
-        href: "/admin#rate-limiting",
+        label: "Security Controls",
+        href: "/admin#security-controls",
         shortcut: isMac ? "⌥R" : "Alt+R",
         shortcutKey: "r",
         requiresShift: false,

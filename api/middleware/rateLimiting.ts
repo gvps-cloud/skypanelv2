@@ -21,6 +21,10 @@ import {
   getRateLimitOverrideForUser,
   type RateLimitOverride,
 } from "../services/rateLimitOverrideService.js";
+import {
+  getActiveRateLimitIpRule,
+  type RateLimitIpRule,
+} from "../services/rateLimitIpRuleService.js";
 import type { AuthenticatedRequest } from "./auth.js";
 
 export type UserType = "anonymous" | "authenticated" | "admin";
@@ -181,6 +185,11 @@ function getTokenFromRequest(req: Request): string | null {
     }
   }
 
+  const cookieToken = (req as Request & { cookies?: Record<string, string> }).cookies?.auth_token;
+  if (typeof cookieToken === "string" && cookieToken.length > 0) {
+    return cookieToken;
+  }
+
   const queryToken = req.query?.token;
   if (typeof queryToken === "string" && queryToken.length > 0) {
     return queryToken;
@@ -210,6 +219,11 @@ function decodeToken(req: Request): TokenPayload | null {
 }
 
 export function getUserType(req: Request): UserType {
+  const authenticatedUser = (req as AuthenticatedRequest).user;
+  if (authenticatedUser?.id) {
+    return authenticatedUser.role === "admin" ? "admin" : "authenticated";
+  }
+
   const decoded = decodeToken(req);
 
   if (!decoded?.userId) {
@@ -237,7 +251,9 @@ export function isDashboardEndpoint(path: string): boolean {
     "/api/health",
     "/api/admin/users/search",
     "/api/organizations",
+    "/api/payments",
     "/api/vps",
+    "/api/hosting",
     "/api/ssh-keys",
     "/api/support",
     "/api/billing",
@@ -253,6 +269,11 @@ export function isDashboardEndpoint(path: string): boolean {
 }
 
 function getAuthenticatedUserId(req: Request): string | undefined {
+  const authenticatedUser = (req as AuthenticatedRequest).user;
+  if (authenticatedUser?.id) {
+    return authenticatedUser.id;
+  }
+
   const decoded = decodeToken(req);
   return decoded?.userId;
 }
@@ -333,6 +354,16 @@ interface OverrideLimiterEntry {
 
 const overrideLimiterCache = new Map<string, OverrideLimiterEntry>();
 
+interface IpRuleLimiterEntry {
+  limiter: RateLimitRequestHandler;
+  ruleType: string;
+  limit: number;
+  windowMs: number;
+  reason: string | null;
+}
+
+const ipRuleLimiterCache = new Map<string, IpRuleLimiterEntry>();
+
 function buildOverrideLimiter(
   userType: UserType,
   override: RateLimitOverride,
@@ -392,6 +423,64 @@ function getOverrideLimiter(
     limit: override.maxRequests,
     windowMs: override.windowMs,
     reason: override.reason ?? null,
+  });
+
+  return limiter;
+}
+
+function buildIpRuleLimiter(
+  userType: UserType,
+  rule: RateLimitIpRule,
+  endpointType: "dashboard" | "api" = "api",
+): RateLimitRequestHandler {
+  const limit = rule.maxRequests ?? getBaseLimitConfig(userType).limit;
+  const windowMs = rule.windowMs ?? getBaseLimitConfig(userType).windowMs;
+
+  return rateLimit({
+    windowMs,
+    max: limit,
+    keyGenerator: () => `${endpointType}:trusted-ip:${rule.ipAddress}`,
+    handler: createCustomHandler(userType, {
+      limit,
+      windowMs,
+      reason: rule.reason ?? "Trusted IP rule",
+    }),
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: false,
+    skipFailedRequests: false,
+    skip: (req: Request) => req.method === "OPTIONS",
+    store: createDistributedStore("rl:ip-rule:"),
+  });
+}
+
+function getIpRuleLimiter(
+  userType: UserType,
+  rule: RateLimitIpRule,
+  endpointType: "dashboard" | "api" = "api",
+): RateLimitRequestHandler {
+  const limit = rule.maxRequests ?? getBaseLimitConfig(userType).limit;
+  const windowMs = rule.windowMs ?? getBaseLimitConfig(userType).windowMs;
+  const cacheKey = `${endpointType}:${rule.id}:${rule.ipAddress}`;
+  const cached = ipRuleLimiterCache.get(cacheKey);
+
+  if (
+    cached &&
+    cached.ruleType === rule.ruleType &&
+    cached.limit === limit &&
+    cached.windowMs === windowMs &&
+    cached.reason === (rule.reason ?? null)
+  ) {
+    return cached.limiter;
+  }
+
+  const limiter = buildIpRuleLimiter(userType, rule, endpointType);
+  ipRuleLimiterCache.set(cacheKey, {
+    limiter,
+    ruleType: rule.ruleType,
+    limit,
+    windowMs,
+    reason: rule.reason ?? null,
   });
 
   return limiter;
@@ -465,11 +554,11 @@ export function createCustomHandler(
     let userName: string | undefined;
     try {
       const authReq = req as AuthenticatedRequest;
-      userId = authReq.user?.id;
+      userId = authReq.user?.id ?? getAuthenticatedUserId(req);
       userEmail = authReq.user?.email;
       userName = authReq.user?.name;
     } catch {
-      // No user info available for anonymous requests
+      userId = getAuthenticatedUserId(req);
     }
 
     if (!userId && options.overrideUserId) {
@@ -500,8 +589,8 @@ export function createCustomHandler(
       const authReq = req as AuthenticatedRequest;
       await logRateLimitEvent(
         {
-          userId: authReq.user?.id ?? options.overrideUserId,
-          organizationId: authReq.user?.organizationId,
+          userId: userId ?? options.overrideUserId,
+          organizationId: (req as AuthenticatedRequest).user?.organizationId,
           endpoint: req.path,
           userType,
           limit,
@@ -542,7 +631,7 @@ export function createRateLimiter(
       const baseKey = generateRateLimitKey(req, userType);
       return `${endpointType}:${baseKey}`;
     },
-    handler: createCustomHandler(userType),
+    handler: createCustomHandler(userType, { limit: effectiveLimit, windowMs }),
     standardHeaders: true,
     legacyHeaders: false,
     // Add current limit info to successful responses
@@ -582,6 +671,35 @@ export async function smartRateLimit(
       return next();
     }
 
+    const ipResult = getClientIP(req, {
+      trustProxy: Boolean(config.rateLimiting.trustProxy),
+      enableLogging: false,
+    });
+    const clientIP = ipResult.ip;
+
+    let ipRule: RateLimitIpRule | null = null;
+    try {
+      ipRule = await getActiveRateLimitIpRule(clientIP);
+    } catch (error) {
+      console.error("Failed to load rate limit IP rule:", error);
+    }
+
+    if (ipRule?.ruleType === "blocked") {
+      console.warn("Blocked request from rate limit IP blacklist:", {
+        ip: clientIP,
+        path: req.path,
+        method: req.method,
+        ruleId: ipRule.id,
+      });
+      res.status(403).json({
+        error: "IP address blocked",
+        message: ipRule.reason
+          ? `This IP address is blocked by security policy: ${ipRule.reason}`
+          : "This IP address is blocked by security policy.",
+      });
+      return;
+    }
+
     const userType = getUserType(req);
 
     (req as any).rateLimitUserType = userType;
@@ -592,7 +710,10 @@ export async function smartRateLimit(
     const userName = authReq.user?.name;
     const baseConfig = getBaseLimitConfig(userType);
 
-    let effectiveLimit = baseConfig.limit;
+    const requestPath = req.originalUrl.split("?")[0];
+    const isDashboard = isDashboardEndpoint(requestPath);
+    const endpointType = isDashboard ? "dashboard" : "api";
+    let effectiveLimit = isDashboard ? baseConfig.limit * 50 : baseConfig.limit;
     let effectiveWindowMs = baseConfig.windowMs;
     let limiter: RateLimitRequestHandler;
 
@@ -611,14 +732,9 @@ export async function smartRateLimit(
       "/api/auth/me",
     ];
 
-    const requestPath = req.originalUrl.split("?")[0];
     const isExemptEndpoint = exemptEndpoints.some((endpoint) =>
       requestPath.startsWith(endpoint),
     );
-
-    // Determine endpoint type for separate rate limit buckets
-    const isDashboard = isDashboardEndpoint(requestPath);
-    const endpointType = isDashboard ? "dashboard" : "api";
 
     // Determine endpoint type and generate rate limit key with prefix
     // This ensures dashboard and external API requests use separate rate limit buckets
@@ -662,10 +778,12 @@ export async function smartRateLimit(
         authenticatedUserId!,
         endpointType,
       );
+    } else if (ipRule?.ruleType === "trusted" && ipRule.maxRequests && ipRule.windowMs) {
+      effectiveLimit = ipRule.maxRequests;
+      effectiveWindowMs = ipRule.windowMs;
+      limiter = getIpRuleLimiter(userType, ipRule, endpointType);
     } else {
       // Select the appropriate limiter based on endpoint type and user type
-      const isDashboard = isDashboardEndpoint(requestPath);
-
       if (isDashboard) {
         switch (userType) {
           case "admin":
@@ -743,7 +861,7 @@ export function createCustomRateLimiter(
     windowMs,
     max: maxRequests,
     keyGenerator: (req: Request) => generateRateLimitKey(req, userType),
-    handler: createCustomHandler(userType),
+    handler: createCustomHandler(userType, { limit: maxRequests, windowMs }),
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests,
