@@ -309,10 +309,6 @@ export default function AboutUs() {
           </div>
         </section>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <AsciiDivider label="values" className="opacity-45 py-2" />
-        </div>
-
         <section className="py-24 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div
@@ -336,6 +332,8 @@ export default function AboutUs() {
                 developer environment to production billing.
               </p>
             </motion.div>
+
+            <AsciiDivider label="values" className="mb-10 opacity-45" />
 
             <motion.div
               variants={revealContainer}
