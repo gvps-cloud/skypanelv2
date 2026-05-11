@@ -42,9 +42,8 @@ Billing is **hourly** — charges are deducted from the organization's prepaid w
 │                                                                            │
 │ Frontend Layer                                                             │
 │   • React Router v7 (route guards)                                         │
-│   • TanStack Query (server state)                                          │
-│   • Zustand (client state)                                                 │
-│   • shadcn/ui + Tailwind component system                                  │
+│   • TanStack Query (server state)                                           │
+│   • shadcn/ui + Tailwind component system                                   │
 │                                                                            │
 │ Backend API Layer (Express.js)                                             │
 │   • Middleware stack: auth, CORS, Helmet, rate limiting                    │

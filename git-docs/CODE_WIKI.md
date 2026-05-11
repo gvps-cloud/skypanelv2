@@ -85,8 +85,8 @@ Top-level directories:
 ### Frontend (React 18 + Vite)
 
 **Entry Points:**
-- [src/main.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/main.tsx) — mounts the React app
-- [src/App.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/App.tsx) — providers and route tree
+- [src/main.tsx](src/main.tsx) — mounts the React app
+- [src/App.tsx](src/App.tsx) — providers and route tree
 
 **Technology Stack:**
 
@@ -101,7 +101,6 @@ Top-level directories:
 | React Hook Form + Zod | Form validation |
 | Framer Motion | Animations |
 | xterm.js | Browser-based SSH terminal |
-| Three.js | 3D globe rendering |
 | @tiptap | Rich text editor |
 | Recharts | Data visualization |
 
@@ -115,7 +114,7 @@ Top-level directories:
 - Auth and impersonation are stored in React Context + mix of cookies/sessionStorage
 
 **API Client:**
-- [src/lib/api.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/lib/api.ts) provides `ApiClient` which automatically includes:
+- [src/lib/api.ts](src/lib/api.ts) provides `ApiClient` which automatically includes:
   - `credentials: "include"` (HttpOnly cookie auth)
   - `X-CSRF-Token` from the `csrf_token` cookie
   - `X-Organization-ID` from `sessionStorage`
@@ -124,8 +123,8 @@ Top-level directories:
 ### Backend (Express 4 + TypeScript)
 
 **Entry Points:**
-- [api/app.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/app.ts) — Express app configuration (middleware + routes + static serving)
-- [api/server.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/server.ts) — starts HTTP server, initializes WebSocket SSH bridge, starts schedulers/listeners
+- [api/app.ts](api/app.ts) — Express app configuration (middleware + routes + static serving)
+- [api/server.ts](api/server.ts) — starts HTTP server, initializes WebSocket SSH bridge, starts schedulers/listeners
 
 The backend is ESM; internal imports use `.js` extensions even when importing `.ts` sources.
 
@@ -159,7 +158,7 @@ Incoming Request
   → Static frontend serving (when dist/ exists)
 ```
 
-When `dist/` exists, Express serves static assets and falls back to `index.html` for non-API requests. Index HTML is rendered with runtime-config script injection (`buildRuntimeHeadMarkup()` and `renderClientIndexHtml()` in [api/app.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/app.ts)).
+When `dist/` exists, Express serves static assets and falls back to `index.html` for non-API requests. Index HTML is rendered with runtime-config script injection (`buildRuntimeHeadMarkup()` and `renderClientIndexHtml()` in [api/app.ts](api/app.ts)).
 
 ### Shared Workspace Packages (lib/)
 
@@ -167,22 +166,22 @@ These are pnpm-managed packages for spec/codegen and shared types:
 
 | Package | Contents |
 |---|---|
-| [lib/api-spec/openapi.yaml](file:///c:/Users/moran/emdash/repositories/skypanelv2/lib/api-spec/openapi.yaml) | OpenAPI source |
-| [lib/api-client-react](file:///c:/Users/moran/emdash/repositories/skypanelv2/lib/api-client-react/src/index.ts) | Generated React Query clients (under `src/generated/`, do not edit) |
-| [lib/api-zod](file:///c:/Users/moran/emdash/repositories/skypanelv2/lib/api-zod/src/index.ts) | Generated Zod schemas (under `src/generated/`, do not edit) |
-| [lib/db](file:///c:/Users/moran/emdash/repositories/skypanelv2/lib/db/src/index.ts) | Drizzle ORM schema package |
+| [lib/api-spec/openapi.yaml](lib/api-spec/openapi.yaml) | OpenAPI source |
+| [lib/api-client-react](lib/api-client-react/src/index.ts) | Generated React Query clients (under `src/generated/`, do not edit) |
+| [lib/api-zod](lib/api-zod/src/index.ts) | Generated Zod schemas (under `src/generated/`, do not edit) |
+| [lib/db](lib/db/src/index.ts) | Drizzle ORM schema package |
 
 Run `pnpm -C lib/api-spec codegen` to regenerate clients from the OpenAPI spec.
 
 ### Database & Migrations
 
-**Primary DB access path:** raw `pg` via [api/lib/database.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/database.ts):
+**Primary DB access path:** raw `pg` via [api/lib/database.ts](api/lib/database.ts):
 - `query(text, params)` — pooled query helper
 - `transaction(callback)` — wraps `BEGIN`/`COMMIT`/`ROLLBACK`
 
 **Secondary path:** Drizzle ORM via `@workspace/db` (used for schema definitions).
 
-**Migrations:** [migrations/](file:///c:/Users/moran/emdash/repositories/skypanelv2/migrations) — numbered, immutable SQL files. Apply using `node scripts/run-migration.js`. Migration runner validates SHA256 checksums.
+**Migrations:** [migrations/](migrations) — numbered, immutable SQL files. Apply using `node scripts/run-migration.js`. Migration runner validates SHA256 checksums.
 
 **Schema conventions:**
 - UUID PKs (`gen_random_uuid()`)
@@ -200,57 +199,57 @@ Run `pnpm -C lib/api-spec codegen` to regenerate clients from the OpenAPI spec.
 **Routing + Layout:**
 | File | Purpose |
 |---|---|
-| [src/App.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/App.tsx) | All routes, auth guards, hosting gates |
-| [src/components/AppLayout.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/AppLayout.tsx) | Authenticated shell |
-| [src/components/PublicLayout.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/PublicLayout.tsx) | Marketing/docs shell |
+| [src/App.tsx](src/App.tsx) | All routes, auth guards, hosting gates |
+| [src/components/AppLayout.tsx](src/components/AppLayout.tsx) | Authenticated shell |
+| [src/components/PublicLayout.tsx](src/components/PublicLayout.tsx) | Marketing/docs shell |
 
 **Auth + Impersonation:**
 | File | Purpose |
 |---|---|
-| [src/contexts/AuthContext.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/contexts/AuthContext.tsx) | Login/register/logout/refresh/profile/2FA/API keys/org switching |
-| [src/contexts/ImpersonationContext.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/contexts/ImpersonationContext.tsx) | Impersonation UX state and session persistence |
-| [src/lib/api.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/lib/api.ts) | Cookie + CSRF + org header handling |
+| [src/contexts/AuthContext.tsx](src/contexts/AuthContext.tsx) | Login/register/logout/refresh/profile/2FA/API keys/org switching |
+| [src/contexts/ImpersonationContext.tsx](src/contexts/ImpersonationContext.tsx) | Impersonation UX state and session persistence |
+| [src/lib/api.ts](src/lib/api.ts) | Cookie + CSRF + org header handling |
 
 **Theme:**
 | File | Purpose |
 |---|---|
-| [src/contexts/ThemeContext.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/contexts/ThemeContext.tsx) | Theme preset application + remote config fetch |
-| [src/theme/presets.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/theme/presets.ts) | Preset definitions and typing |
+| [src/contexts/ThemeContext.tsx](src/contexts/ThemeContext.tsx) | Theme preset application + remote config fetch |
+| [src/theme/presets.ts](src/theme/presets.ts) | Preset definitions and typing |
 
 **Public Pages:**
 | File | Purpose |
 |---|---|
-| [src/pages/Blog.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/Blog.tsx) | Public blog listing page |
-| [src/pages/BlogPost.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/BlogPost.tsx) | Individual blog post page |
-| [src/pages/Support.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/Support.tsx) | Support ticket portal |
-| [src/pages/HostingMarketing.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/HostingMarketing.tsx) | Hosting marketing/landing page |
-| [src/pages/Maintenance.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/Maintenance.tsx) | Maintenance mode splash page |
+| [src/pages/Blog.tsx](src/pages/Blog.tsx) | Public blog listing page |
+| [src/pages/BlogPost.tsx](src/pages/BlogPost.tsx) | Individual blog post page |
+| [src/pages/Support.tsx](src/pages/Support.tsx) | Support ticket portal |
+| [src/pages/HostingMarketing.tsx](src/pages/HostingMarketing.tsx) | Hosting marketing/landing page |
+| [src/pages/Maintenance.tsx](src/pages/Maintenance.tsx) | Maintenance mode splash page |
 
 **Marketing Components:**
 | File | Purpose |
 |---|---|
-| [src/components/fx/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/fx/) | Decorative terminal effects for marketing pages |
-| [src/components/terminal/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/terminal/) | Terminal UI components |
-| [src/components/marketing/MarketingHero.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/marketing/MarketingHero.tsx) | Hero section for marketing pages |
-| [src/components/MarketingPageShell.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/MarketingPageShell.tsx) | Page shell for public marketing pages |
-| [src/components/home/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/home/) | Home page components: DataStreamCanvas, ParticleGlobe, SkyPanelPreview, GlobeRegionPanel |
+| [src/components/fx/](src/components/fx/) | Decorative terminal effects for marketing pages |
+| [src/components/terminal/](src/components/terminal/) | Terminal UI components |
+| [src/components/marketing/MarketingHero.tsx](src/components/marketing/MarketingHero.tsx) | Hero section for marketing pages |
+| [src/components/MarketingPageShell.tsx](src/components/MarketingPageShell.tsx) | Page shell for public marketing pages |
+| [src/components/home/](src/components/home/) | Home page components: DataStreamCanvas, SkyPanelPreview, GlobeRegionPanel |
 
 **Admin CMS Components:**
 | File | Purpose |
 |---|---|
-| [src/components/admin/blog/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/admin/blog/) | BlogCategoryManager, BlogPostManager |
-| [src/components/admin/email/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/admin/email/) | EmailTemplateEditor, EmailTemplateList, EmailTemplatesManager |
-| [src/components/admin/documentation/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/admin/documentation/) | DocumentationArticleManager, DocumentationCategoryManager, DocumentationManager |
+| [src/components/admin/blog/](src/components/admin/blog/) | BlogCategoryManager, BlogPostManager |
+| [src/components/admin/email/](src/components/admin/email/) | EmailTemplateEditor, EmailTemplateList, EmailTemplatesManager |
+| [src/components/admin/documentation/](src/components/admin/documentation/) | DocumentationArticleManager, DocumentationCategoryManager, DocumentationManager |
 
 **Hosting:**
 | File | Purpose |
 |---|---|
-| [src/hooks/useHosting.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/hooks/useHosting.ts) | Query keys and data fetchers for hosting |
+| [src/hooks/useHosting.ts](src/hooks/useHosting.ts) | Query keys and data fetchers for hosting |
 
 **Real-Time:**
 | File | Purpose |
 |---|---|
-| [src/components/NotificationDropdown.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/NotificationDropdown.tsx) | Subscribes to SSE and renders notification UI |
+| [src/components/NotificationDropdown.tsx](src/components/NotificationDropdown.tsx) | Subscribes to SSE and renders notification UI |
 
 **Frontend Hooks:**
 | Hook | Purpose |
@@ -268,105 +267,105 @@ Run `pnpm -C lib/api-spec codegen` to regenerate clients from the OpenAPI spec.
 **Config:**
 | File | Purpose |
 |---|---|
-| [api/config/index.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/config/index.ts) | Environment parsing, validation, feature toggles. Config is exported as a Proxy — values read dynamically from env. |
+| [api/config/index.ts](api/config/index.ts) | Environment parsing, validation, feature toggles. Config is exported as a Proxy — values read dynamically from env. |
 
 **Middleware:**
 | File | Purpose |
 |---|---|
-| [api/middleware/auth.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/middleware/auth.ts) | JWT verification, token blacklist, org resolution, impersonation flags |
-| [api/middleware/csrfProtection.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/middleware/csrfProtection.ts) | CSRF token validation |
-| [api/middleware/rateLimiting.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/middleware/rateLimiting.ts) | Tiered rate limiting + headers |
-| [api/middleware/hosting.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/middleware/hosting.ts) | Hosting feature gating |
-| [api/middleware/permissions.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/middleware/permissions.ts) | Organization-based RBAC |
+| [api/middleware/auth.ts](api/middleware/auth.ts) | JWT verification, token blacklist, org resolution, impersonation flags |
+| [api/middleware/csrfProtection.ts](api/middleware/csrfProtection.ts) | CSRF token validation |
+| [api/middleware/rateLimiting.ts](api/middleware/rateLimiting.ts) | Tiered rate limiting + headers |
+| [api/middleware/hosting.ts](api/middleware/hosting.ts) | Hosting feature gating |
+| [api/middleware/permissions.ts](api/middleware/permissions.ts) | Organization-based RBAC |
 
 **Routes (api/routes/):**
 | Route | File |
 |---|---|
-| Auth | [routes/auth.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/auth.ts) |
-| VPS | [routes/vps/index.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/vps/index.ts) (+ subroutes: backups, disks, firewalls, instances, networking, plans, providers, stackscripts, stats) |
-| Hosting | [routes/hosting/store.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/hosting/store.ts) (+ subroutes: apps, backups, cron, dns, email, ftp, joomla, mysql, node, public, ssh, ssl, web, wordpress) |
-| Admin | [routes/admin/index.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/admin/index.ts) (+ 20+ subroute handlers) |
-| Payments | [routes/payments.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/payments.ts) |
-| Organizations | [routes/organizations.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/organizations.ts) |
-| Support | [routes/support.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/support.ts) |
-| Notifications (SSE) | [routes/notifications.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/notifications.ts) |
-| SSH Keys | [routes/sshKeys.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/sshKeys.ts) |
-| Notes | [routes/notes.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/notes.ts) |
-| API Keys | [routes/apiKeys/](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/apiKeys/index.ts) |
-| Blog (public) | [routes/blog.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/blog.ts) — public blog API |
-| Blog (admin) | [routes/admin/blog.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/admin/blog.ts) — admin blog CMS API |
+| Auth | [routes/auth.ts](api/routes/auth.ts) |
+| VPS | [routes/vps/index.ts](api/routes/vps/index.ts) (+ subroutes: backups, disks, firewalls, instances, networking, plans, providers, stackscripts, stats) |
+| Hosting | [routes/hosting/store.ts](api/routes/hosting/store.ts) (+ subroutes: apps, backups, cron, dns, email, ftp, joomla, mysql, node, public, ssh, ssl, web, wordpress) |
+| Admin | [routes/admin/index.ts](api/routes/admin/index.ts) (+ 20+ subroute handlers) |
+| Payments | [routes/payments.ts](api/routes/payments.ts) |
+| Organizations | [routes/organizations.ts](api/routes/organizations.ts) |
+| Support | [routes/support.ts](api/routes/support.ts) |
+| Notifications (SSE) | [routes/notifications.ts](api/routes/notifications.ts) |
+| SSH Keys | [routes/sshKeys.ts](api/routes/sshKeys.ts) |
+| Notes | [routes/notes.ts](api/routes/notes.ts) |
+| API Keys | [routes/apiKeys/](api/routes/apiKeys/index.ts) |
+| Blog (public) | [routes/blog.ts](api/routes/blog.ts) — public blog API |
+| Blog (admin) | [routes/admin/blog.ts](api/routes/admin/blog.ts) — admin blog CMS API |
 
 **Services (api/services/):**
 
 | Service | Purpose |
 |---|---|
-| [authService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/authService.ts) | JWT token management |
-| [billingService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/billingService.ts) | Hourly billing engine |
-| [egressBillingService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/egressBillingService.ts) | Transfer pool tracking (monthly) |
-| [egressCreditService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/egressCreditService.ts) | Prepaid egress credit management |
-| [egressHourlyBillingService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/egressHourlyBillingService.ts) | Hourly egress billing |
-| [hostingBillingService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/hostingBillingService.ts) | Monthly hosting subscription billing |
-| [invoiceService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/invoiceService.ts) | Invoice generation |
-| [paypalService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/paypalService.ts) | PayPal order/capture/wallet operations |
-| [emailService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/emailService.ts) | Email with provider fallback |
-| [notificationService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/notificationService.ts) | PG LISTEN/NOTIFY → EventEmitter → SSE |
-| [activityLogger.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/activityLogger.ts) | Activity log recording |
-| [sshBridge.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/sshBridge.ts) | WebSocket SSH terminal bridge |
-| [enhanceService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/enhanceService.ts) | Enhance control panel API wrapper |
-| [enhanceOnboardingService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/enhanceOnboardingService.ts) | Customer org/website provisioning via Enhance |
-| [enhanceToggle.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/enhanceToggle.ts) | Feature flag checks for hosting |
-| [refundService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/refundService.ts) | PayPal refund processing |
-| [fraudLabsProService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/fraudLabsProService.ts) | FraudLabsPro transaction screening |
-| [roles.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/roles.ts) | Role/permission management |
-| [notes.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/notes.ts) | Personal and org notes service |
-| [invitations.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/invitations.ts) | Organization invitation logic |
-| [themeService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/themeService.ts) | Theme configuration |
-| [tokenBlacklistService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/tokenBlacklistService.ts) | JWT token blacklist |
-| [bunnyCdnService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/bunnyCdnService.ts) | Bunny CDN edge server IP detection |
-| [ticketNotificationService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/ticketNotificationService.ts) | Support ticket email/real-time notifications |
-| [bruteForceProtectionService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/bruteForceProtectionService.ts) | Brute force lockout |
-| [platformStatsService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/platformStatsService.ts) | Platform-wide statistics aggregation |
-| [activityEmailService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/activityEmailService.ts) | Activity-triggered email notifications |
-| [activityFeed.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/activityFeed.ts) | Activity feed aggregation and querying |
-| [emailTemplateService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/emailTemplateService.ts) | Email template CRUD and rendering |
-| [platformSettingsService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/platformSettingsService.ts) | Platform-wide settings management |
-| [rateLimitConfigValidator.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/rateLimitConfigValidator.ts) | Rate limit configuration validation |
-| [rateLimitMetrics.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/rateLimitMetrics.ts) | Rate limit usage metrics collection |
-| [rateLimitOverrideService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/rateLimitOverrideService.ts) | Per-user/per-org rate limit overrides |
+| [authService.ts](api/services/authService.ts) | JWT token management |
+| [billingService.ts](api/services/billingService.ts) | Hourly billing engine |
+| [egressBillingService.ts](api/services/egressBillingService.ts) | Transfer pool tracking (monthly) |
+| [egressCreditService.ts](api/services/egressCreditService.ts) | Prepaid egress credit management |
+| [egressHourlyBillingService.ts](api/services/egressHourlyBillingService.ts) | Hourly egress billing |
+| [hostingBillingService.ts](api/services/hostingBillingService.ts) | Monthly hosting subscription billing |
+| [invoiceService.ts](api/services/invoiceService.ts) | Invoice generation |
+| [paypalService.ts](api/services/paypalService.ts) | PayPal order/capture/wallet operations |
+| [emailService.ts](api/services/emailService.ts) | Email with provider fallback |
+| [notificationService.ts](api/services/notificationService.ts) | PG LISTEN/NOTIFY → EventEmitter → SSE |
+| [activityLogger.ts](api/services/activityLogger.ts) | Activity log recording |
+| [sshBridge.ts](api/services/sshBridge.ts) | WebSocket SSH terminal bridge |
+| [enhanceService.ts](api/services/enhanceService.ts) | Enhance control panel API wrapper |
+| [enhanceOnboardingService.ts](api/services/enhanceOnboardingService.ts) | Customer org/website provisioning via Enhance |
+| [enhanceToggle.ts](api/services/enhanceToggle.ts) | Feature flag checks for hosting |
+| [refundService.ts](api/services/refundService.ts) | PayPal refund processing |
+| [fraudLabsProService.ts](api/services/fraudLabsProService.ts) | FraudLabsPro transaction screening |
+| [roles.ts](api/services/roles.ts) | Role/permission management |
+| [notes.ts](api/services/notes.ts) | Personal and org notes service |
+| [invitations.ts](api/services/invitations.ts) | Organization invitation logic |
+| [themeService.ts](api/services/themeService.ts) | Theme configuration |
+| [tokenBlacklistService.ts](api/services/tokenBlacklistService.ts) | JWT token blacklist |
+| [bunnyCdnService.ts](api/services/bunnyCdnService.ts) | Bunny CDN edge server IP detection |
+| [ticketNotificationService.ts](api/services/ticketNotificationService.ts) | Support ticket email/real-time notifications |
+| [bruteForceProtectionService.ts](api/services/bruteForceProtectionService.ts) | Brute force lockout |
+| [platformStatsService.ts](api/services/platformStatsService.ts) | Platform-wide statistics aggregation |
+| [activityEmailService.ts](api/services/activityEmailService.ts) | Activity-triggered email notifications |
+| [activityFeed.ts](api/services/activityFeed.ts) | Activity feed aggregation and querying |
+| [emailTemplateService.ts](api/services/emailTemplateService.ts) | Email template CRUD and rendering |
+| [platformSettingsService.ts](api/services/platformSettingsService.ts) | Platform-wide settings management |
+| [rateLimitConfigValidator.ts](api/services/rateLimitConfigValidator.ts) | Rate limit configuration validation |
+| [rateLimitMetrics.ts](api/services/rateLimitMetrics.ts) | Rate limit usage metrics collection |
+| [rateLimitOverrideService.ts](api/services/rateLimitOverrideService.ts) | Per-user/per-org rate limit overrides |
 
 **Provider Layer (api/services/providers/):**
 
 | File | Purpose |
 |---|---|
-| [IProviderService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/providers/IProviderService.ts) | Provider interface contract |
-| [BaseProviderService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/providers/BaseProviderService.ts) | Shared provider logic |
-| [LinodeProviderService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/providers/LinodeProviderService.ts) | Linode-specific implementation |
-| [ProviderFactory.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/providers/ProviderFactory.ts) | Provider instantiation (currently only `linode`) |
-| [errorNormalizer.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/providers/errorNormalizer.ts) | Provider error normalization |
+| [IProviderService.ts](api/services/providers/IProviderService.ts) | Provider interface contract |
+| [BaseProviderService.ts](api/services/providers/BaseProviderService.ts) | Shared provider logic |
+| [LinodeProviderService.ts](api/services/providers/LinodeProviderService.ts) | Linode-specific implementation |
+| [ProviderFactory.ts](api/services/providers/ProviderFactory.ts) | Provider instantiation (currently only `linode`) |
+| [errorNormalizer.ts](api/services/providers/errorNormalizer.ts) | Provider error normalization |
 
 **Hosting Utility Helpers (api/lib/):**
 
 | File | Purpose |
 |---|---|
-| [hostingBackups.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/hostingBackups.ts) | Backup management helpers |
-| [hostingEnhanceOrg.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/hostingEnhanceOrg.ts) | Enhance org resolution |
-| [hostingRouteHelpers.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/hostingRouteHelpers.ts) | Shared route handler utilities |
+| [hostingBackups.ts](api/lib/hostingBackups.ts) | Backup management helpers |
+| [hostingEnhanceOrg.ts](api/lib/hostingEnhanceOrg.ts) | Enhance org resolution |
+| [hostingRouteHelpers.ts](api/lib/hostingRouteHelpers.ts) | Shared route handler utilities |
 
 **Shared Utilities (api/lib/):**
 
 | File | Purpose |
 |---|---|
-| [database.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/database.ts) | PostgreSQL query/transaction helpers |
-| [crypto.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/crypto.ts) | AES-256 encrypt/decrypt |
-| [providerTokens.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/providerTokens.ts) | Provider API token resolution and normalization |
-| [errorHandling.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/errorHandling.ts) | Error formatting (`handleProviderError`) |
-| [validation.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/validation.ts) | Input validation helpers |
-| [security.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/security.ts) | Security utilities |
-| [ipDetection.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/ipDetection.ts) | Client IP resolution |
-| [whiteLabel.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/whiteLabel.ts) | White-label category mapping |
-| [activityFilters.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/activityFilters.ts) | Activity log filtering |
-| [diagnostics.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/diagnostics.ts) | System diagnostics |
-| [fsUtils.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/fsUtils.ts) | File system helpers |
+| [database.ts](api/lib/database.ts) | PostgreSQL query/transaction helpers |
+| [crypto.ts](api/lib/crypto.ts) | AES-256 encrypt/decrypt |
+| [providerTokens.ts](api/lib/providerTokens.ts) | Provider API token resolution and normalization |
+| [errorHandling.ts](api/lib/errorHandling.ts) | Error formatting (`handleProviderError`) |
+| [validation.ts](api/lib/validation.ts) | Input validation helpers |
+| [security.ts](api/lib/security.ts) | Security utilities |
+| [ipDetection.ts](api/lib/ipDetection.ts) | Client IP resolution |
+| [whiteLabel.ts](api/lib/whiteLabel.ts) | White-label category mapping |
+| [activityFilters.ts](api/lib/activityFilters.ts) | Activity log filtering |
+| [diagnostics.ts](api/lib/diagnostics.ts) | System diagnostics |
+| [fsUtils.ts](api/lib/fsUtils.ts) | File system helpers |
 
 ---
 
@@ -374,42 +373,42 @@ Run `pnpm -C lib/api-spec codegen` to regenerate clients from the OpenAPI spec.
 
 ### Backend
 
-**`authenticateToken`** ([api/middleware/auth.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/middleware/auth.ts)):
+**`authenticateToken`** ([api/middleware/auth.ts](api/middleware/auth.ts)):
 Performs token extraction from `Authorization: Bearer …` or `auth_token` cookie, revocation check via `tokenBlacklistService`, JWT verification with `config.JWT_SECRET`. Loads user record and resolves `organizationId` via `resolveOrganizationIdForUser`. Sets `req.user`, `req.auth`, and convenience fields `req.userId`/`req.organizationId`.
 
-**`resolveOrganizationIdForUser`** ([api/middleware/auth.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/middleware/auth.ts)):
+**`resolveOrganizationIdForUser`** ([api/middleware/auth.ts](api/middleware/auth.ts)):
 Enforces stable org context: prefers `X-Organization-ID` header if membership exists, falls back to `active_organization_id` if valid, otherwise picks first membership or owned org. Optionally auto-creates org for non-admin users when `AUTO_CREATE_ORG` is enabled.
 
-**`BillingService.runHourlyBilling`** ([api/services/billingService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/billingService.ts#L125-L215)):
+**`BillingService.runHourlyBilling`** ([api/services/billingService.ts](api/services/billingService.ts#L125-L215)):
 Selects VPS instances not billed within the last hour, processes in batches, and bills each with a transaction. Computes elapsed full hours and total hourly charge (base + backup), checks wallet balance, records billing cycles, and deducts via `PayPalService.deductFundsFromWallet`.
 
-**`InvoiceService.generateInvoiceFromBillingCycles`** ([api/services/invoiceService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/invoiceService.ts#L822-L902)):
+**`InvoiceService.generateInvoiceFromBillingCycles`** ([api/services/invoiceService.ts](api/services/invoiceService.ts#L822-L902)):
 Creates itemized invoice line-items (base VPS vs backups). `generateInvoiceFromHostingCycles` generates hosting invoices.
 
-**`HostingBillingService.createInitialPurchaseCharge`** ([api/services/hostingBillingService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/hostingBillingService.ts)):
+**`HostingBillingService.createInitialPurchaseCharge`** ([api/services/hostingBillingService.ts](api/services/hostingBillingService.ts)):
 Charges local hosting wallet, creates pending subscription + billing cycle for initial hosting purchase.
 
-**`EnhanceOnboardingService.ensureEnhanceCustomerForPurchase`** ([api/services/enhanceOnboardingService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/enhanceOnboardingService.ts)):
+**`EnhanceOnboardingService.ensureEnhanceCustomerForPurchase`** ([api/services/enhanceOnboardingService.ts](api/services/enhanceOnboardingService.ts)):
 Creates/ensures customer exists in Enhance, creates Enhance subscription and website with plan-specific server group handling.
 
-**`notificationService`** ([api/services/notificationService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/notificationService.ts)):
+**`notificationService`** ([api/services/notificationService.ts](api/services/notificationService.ts)):
 Singleton `EventEmitter` that connects a dedicated `pg.Client`, runs `LISTEN new_activity`, parses payload JSON on each notification, emits a local `notification` event, and reconnects with exponential backoff.
 
-**`initSSHBridge`** ([api/services/sshBridge.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/sshBridge.ts)):
+**`initSSHBridge`** ([api/services/sshBridge.ts](api/services/sshBridge.ts)):
 Attaches a `ws` WebSocketServer to the existing HTTP server. Authenticates via `auth_token` HttpOnly cookie (with optional `?token=` fallback), verifies JWT, authorizes by `organization_id`. Opens SSH2 shell and forwards `input`/`resize` messages bidirectionally.
 
-**`ProviderFactory.createProvider`** ([api/services/providers/ProviderFactory.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/providers/ProviderFactory.ts)):
+**`ProviderFactory.createProvider`** ([api/services/providers/ProviderFactory.ts](api/services/providers/ProviderFactory.ts)):
 Creates provider clients based on `service_providers` record. Currently returns `LinodeProviderService` only. Uses `normalizeProviderToken()` for token normalization.
 
 ### Frontend
 
-**`ApiClient`** ([src/lib/api.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/lib/api.ts)):
+**`ApiClient`** ([src/lib/api.ts](src/lib/api.ts)):
 Axios-based client that automatically includes cookies, CSRF token, and org header. Handles 401 logout via `setupAutoLogout()`.
 
-**`AuthProvider`** ([src/contexts/AuthContext.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/contexts/AuthContext.tsx)):
+**`AuthProvider`** ([src/contexts/AuthContext.tsx](src/contexts/AuthContext.tsx)):
 Manages login/register/logout, hydrates state on mount via `/api/auth/me`, stores `organizationId` in `sessionStorage` as `skypanel_org_id`.
 
-**`ThemeProvider`** ([src/contexts/ThemeContext.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/contexts/ThemeContext.tsx)):
+**`ThemeProvider`** ([src/contexts/ThemeContext.tsx](src/contexts/ThemeContext.tsx)):
 Manages theme preset selection (stored in localStorage), custom preset support, applies CSS variables by injecting a style tag, and syncs remote theme config from `/api/theme`.
 
 ---
@@ -432,7 +431,7 @@ The root app is a single deployable unit (Express server + optional static `dist
 ### Cross-Module Coupling (Practical Graph)
 
 - **Frontend → Backend:** `src/lib/api.ts` depends on backend's cookie + CSRF model and org header conventions. Route guards in `src/App.tsx` depend on `/api/auth/me` and `/api/hosting/status`.
-- **Backend → DB:** Most routes/services call `query()` / `transaction()` from [api/lib/database.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/database.ts). Notifications and tickets rely on Postgres NOTIFY channels.
+- **Backend → DB:** Most routes/services call `query()` / `transaction()` from [api/lib/database.ts](api/lib/database.ts). Notifications and tickets rely on Postgres NOTIFY channels.
 - **Backend → Providers:** Provider services abstract external APIs (Linode, Enhance) and feed normalized data back into routes.
 
 ---
@@ -471,7 +470,7 @@ node scripts/generate-encryption-key.js
 ### Authentication & Organization Context
 
 **Backend:**
-1. `authenticateToken` in [api/middleware/auth.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/middleware/auth.ts) extracts token from `Authorization: Bearer …` or `auth_token` cookie
+1. `authenticateToken` in [api/middleware/auth.ts](api/middleware/auth.ts) extracts token from `Authorization: Bearer …` or `auth_token` cookie
 2. Checks revocation via `tokenBlacklistService`
 3. Verifies JWT with `config.JWT_SECRET`
 4. Loads user record and resolves `organizationId` via `resolveOrganizationIdForUser`
@@ -484,21 +483,21 @@ node scripts/generate-encryption-key.js
 
 ### API Key Authentication
 
-- Middleware: [authenticateApiKey](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/apiKeys/middleware.ts) mounted in `app.ts` as `app.use("/api", authenticateApiKey)`
+- Middleware: [authenticateApiKey](api/routes/apiKeys/middleware.ts) mounted in `app.ts` as `app.use("/api", authenticateApiKey)`
 - When valid API key present, middleware sets `req.user` so downstream handlers treat it as authenticated
 - `authenticateToken` skips JWT validation when `(req as any).user?.isApiKey` is present
 
 ### VPS Provisioning (Provider Abstraction)
 
-Provider interface and implementations live in [api/services/providers](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/providers):
+Provider interface and implementations live in [api/services/providers](api/services/providers):
 - `IProviderService` — contract for provider implementations
 - `ProviderFactory.createProvider` — creates provider clients (currently only `linode`)
 - `LinodeProviderService` — Linode-specific implementation
-- `normalizeProviderToken()` in [api/lib/providerTokens.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/lib/providerTokens.ts) ensures provider tokens are stored/encrypted consistently
+- `normalizeProviderToken()` in [api/lib/providerTokens.ts](api/lib/providerTokens.ts) ensures provider tokens are stored/encrypted consistently
 
 ### Billing (Wallet + Hourly VPS + Egress + Hosting)
 
-**Schedulers (server startup in [api/server.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/server.ts)):**
+**Schedulers (server startup in [api/server.ts](api/server.ts)):**
 - Initial startup billing (after short delay)
 - Every hour via `setInterval` — hourly VPS and egress billing
 - Monthly egress finalization runs only on UTC day 1
@@ -525,7 +524,7 @@ Provider interface and implementations live in [api/services/providers](file:///
 1. `notificationService` connects dedicated `pg.Client`
 2. Runs `LISTEN new_activity`
 3. On each notification, parses JSON and emits local `notification` event
-4. SSE endpoint in [routes/notifications.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/notifications.ts) subscribes clients
+4. SSE endpoint in [routes/notifications.ts](api/routes/notifications.ts) subscribes clients
 
 **Frontend:**
 - `NotificationDropdown` subscribes to SSE stream and renders notifications
@@ -540,7 +539,7 @@ Provider interface and implementations live in [api/services/providers](file:///
 
 ### Enhance Hosting Purchase
 
-**Route:** `POST /api/hosting/purchase` ([routes/hosting/store.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/hosting/store.ts#L452-L802))
+**Route:** `POST /api/hosting/purchase` ([routes/hosting/store.ts](api/routes/hosting/store.ts#L452-L802))
 
 **Flow:**
 1. Guardrails: `authenticateToken`, `requireOrganization`, `requireHostingEnabledForUsers`, `requireOrgPermission("hosting_manage")`
@@ -558,11 +557,11 @@ Provider interface and implementations live in [api/services/providers](file:///
 - `ThemeProvider` manages theme preset selection (localStorage), custom preset support, applies CSS variables via injected style tag, syncs remote config from `/api/theme`
 
 **Backend:**
-- Theme routes in [api/routes/theme.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/theme.ts) coordinate preset configuration and admin management
+- Theme routes in [api/routes/theme.ts](api/routes/theme.ts) coordinate preset configuration and admin management
 
 ### Support Ticket System
 
-**Route:** [api/routes/support.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/support.ts)
+**Route:** [api/routes/support.ts](api/routes/support.ts)
 
 **Ticket lifecycle:**
 1. **Create** — Authenticated user opens a ticket with a subject, description, and optional priority. Backend inserts into `support_tickets` scoped to the user's organization.
@@ -572,7 +571,7 @@ Provider interface and implementations live in [api/services/providers](file:///
 
 ### Blog System
 
-**Routes:** Public API at [api/routes/blog.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/blog.ts), admin CMS at [api/routes/admin/blog.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/admin/blog.ts)
+**Routes:** Public API at [api/routes/blog.ts](api/routes/blog.ts), admin CMS at [api/routes/admin/blog.ts](api/routes/admin/blog.ts)
 
 **Flow:**
 1. **Public browsing** — Anonymous visitors browse paginated blog posts at `/blog` and individual posts at `/blog/:slug`. Posts are served from `blog_posts` with published status and future `published_at` dates filtered out.
@@ -722,4 +721,4 @@ npx vitest run api/routes/__tests__/hosting-store.test.ts api/tests/hosting-purc
 
 ---
 
-*Document generated from codebase analysis. For operational scripts and additional reference, see [scripts/README.md](file:///c:/Users/moran/emdash/repositories/skypanelv2/scripts/README.md). For provider architecture details, see [api/services/providers/ARCHITECTURE.md](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/providers/ARCHITECTURE.md).*
+*Document generated from codebase analysis. For operational scripts and additional reference, see [scripts/README.md](scripts/README.md). For provider architecture details, see [api/services/providers/ARCHITECTURE.md](api/services/providers/ARCHITECTURE.md).*

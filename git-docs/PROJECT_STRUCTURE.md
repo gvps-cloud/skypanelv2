@@ -401,7 +401,6 @@ skypanelv2/
 │   │   ├── home/                           # Landing page components
 │   │   │   ├── DataStreamCanvas.tsx
 │   │   │   ├── GlobeRegionPanel.tsx
-│   │   │   ├── ParticleGlobe.tsx
 │   │   │   └── SkyPanelPreview.tsx
 │   │   ├── icons/
 │   │   │   └── tech/                       # Technology icon components
@@ -672,15 +671,13 @@ skypanelv2/
 │       ├── package.json
 │       └── tsconfig.json
 │
-├── migrations/                             # Sequential SQL migrations (71 files)
+├── migrations/                             # Sequential SQL migrations (72 files)
 │   ├── 001_initial_schema.sql
 │   ├── 002_relax_activity_logs_constraint.sql
 │   ├── 003_remove_legacy_container_artifacts.sql
-│   ├── ...                                 # (3–067 omitted for brevity)
-│   ├── 068_support_tickets_hosting_snapshots.sql
-│   ├── 069_hosting_email_templates.sql
-│   ├── 070_hosting_subscription_last_warning.sql
-│   └── 071_create_blog.sql
+│   ├── ...                                 # (3–070 omitted for brevity)
+│   ├── 071_create_blog.sql
+│   └── 072_add_linode_platform_integration.sql
 │
 ├── scripts/                                # Node.js utility scripts (37 files)
 │   ├── lib/

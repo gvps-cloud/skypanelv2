@@ -154,7 +154,7 @@ Relationship highlights
 
 ## Migration History
 
-The database schema is managed through **71 sequential SQL migrations** in the `migrations/` directory:
+The database schema is managed through **72 sequential SQL migrations** in the `migrations/` directory:
 
 | Migration | Description |
 | --------- | ----------- |
@@ -201,3 +201,4 @@ The database schema is managed through **71 sequential SQL migrations** in the `
 | `069` | Hosting email templates — seed templates for credentials, welcome, suspended, recovered, cancelled, renewal, suspension warning, admin action |
 | `070` | Hosting subscription last warning — last_warning_sent_at column on hosting_subscriptions for balance warning deduplication |
 | `071` | Blog system — blog_categories, blog_posts (with slug+year unique, soft delete), blog_tags, blog_post_tags junction table |
+| `072` | Linode platform integration — add Linode as a managed platform integration with configuration and API token storage |

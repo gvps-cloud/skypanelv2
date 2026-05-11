@@ -24,7 +24,6 @@ React SPA technology stack, routing, context providers, and key components.
 | **cmdk**                  | Command palette (Ctrl/Cmd + K)                            |
 | **@dnd-kit**              | Drag and drop (sortable lists)                            |
 | **Leaflet + react-leaflet** | Interactive maps for regions page                       |
-| **Three.js**              | 3D globe rendering                                        |
 | **@tiptap**               | Rich text editor (code blocks, tables, images, links)     |
 | **dompurify**             | HTML sanitization                                         |
 | **date-fns**              | Date formatting and manipulation                          |
@@ -107,7 +106,7 @@ QueryClientProvider (TanStack Query)
 | `src/components/layouts/`       | Page layout wrappers — ContentCard, PageHeader, StatsGrid                          |
 | `src/components/api-docs/`      | API documentation explorer — SwaggerExplorer, RequestBuilder, ResponseViewer, ApiKeyInput |
 | `src/components/docs/`          | Documentation article viewer — ApiReference component                              |
-| `src/components/home/`          | Landing page sections — ParticleGlobe, DataStreamCanvas, SkyPanelPreview, GlobeRegionPanel |
+| `src/components/home/`          | Landing page sections — DataStreamCanvas, SkyPanelPreview, GlobeRegionPanel |
 | `src/components/marketing/`     | Marketing page components — MarketingHero                                          |
 | `src/components/fx/`            | Terminal FX effects — BootSequence, AsciiArt, GlitchText, MatrixRain, ScanlineOverlay, TypewriterText, StatusHeartbeat |
 | `src/components/terminal/`      | Terminal workspace — TerminalPanel, TerminalEmptyState, TerminalErrorScreen, TerminalLoadingScreen, TerminalPageHeader |
