@@ -94,7 +94,7 @@ export default function FirewallTab({
                         {firewall.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary dark:bg-primary/40 dark:text-primary"
+                            className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground dark:bg-primary/40 dark:text-primary-foreground"
                           >
                             #{tag}
                           </span>

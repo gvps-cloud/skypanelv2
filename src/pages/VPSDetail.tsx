@@ -93,17 +93,17 @@ import type {
 
 const statusStyles: Record<string, string> = {
   running:
-    "border border-green-200 text-green-700 bg-green-100 dark:border-green-900/60 dark:text-green-200 dark:bg-green-900/30",
+    "border border-success/25 bg-success/15 text-success dark:border-success/30 dark:bg-success/25 dark:text-success-foreground",
   stopped:
-    "border border-border text-foreground bg-muted border text-muted-foreground bg-card/60",
+    "border border-border bg-muted text-muted-foreground",
   provisioning:
-    "border border-primary/20 text-primary bg-primary/10 dark:border-primary/60 dark:text-primary dark:bg-primary/30",
+    "border border-primary/20 bg-primary/10 text-primary dark:border-primary/40 dark:bg-primary/25 dark:text-primary-foreground",
   rebooting:
-    "border border-amber-200 text-amber-700 bg-amber-100 dark:border-amber-900/60 dark:text-amber-200 dark:bg-amber-900/30",
+    "border border-warning/25 bg-warning/15 text-warning dark:border-warning/30 dark:bg-warning/25 dark:text-warning-foreground",
   error:
-    "border border-red-200 text-red-700 bg-red-100 dark:border-red-900/60 dark:text-red-200 dark:bg-red-900/30",
+    "border border-destructive/25 bg-destructive/15 text-destructive dark:border-destructive/30 dark:bg-destructive/25 dark:text-destructive-foreground",
   unknown:
-    "border border-slate-200 text-slate-700 bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:bg-slate-800/60",
+    "border border-muted bg-muted text-muted-foreground dark:border-muted/60 dark:bg-muted/50 dark:text-muted-foreground",
 };
 
 const formatDateTime = (value: string | null): string => {
@@ -614,16 +614,16 @@ const VPSDetail: React.FC = () => {
     switch (status) {
       case "completed":
       case "finished":
-        return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200";
+        return "bg-success/15 text-success dark:bg-success/25 dark:text-success-foreground";
       case "failed":
-        return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200";
+        return "bg-destructive/15 text-destructive dark:bg-destructive/25 dark:text-destructive-foreground";
       case "in_progress":
       case "started":
-        return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200";
+        return "bg-warning/15 text-warning dark:bg-warning/25 dark:text-warning-foreground";
       case "scheduled":
-        return "bg-primary/10 text-primary dark:bg-primary/40 dark:text-primary";
+        return "bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary-foreground";
       default:
-        return "bg-muted text-foreground bg-card/60 text-muted-foreground";
+        return "bg-muted text-muted-foreground";
     }
   };
 
