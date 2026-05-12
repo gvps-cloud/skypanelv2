@@ -29,7 +29,8 @@
     "pm2:reload": "pm2 reload ecosystem.config.cjs --env production",
     "pm2:stop": "pm2 stop skypanelv2-api && pm2 delete skypanelv2-api",
     "pm2:list": "pm2 ls",
-    "skypanel": "node cli/skypanel.mjs",
+    "skypanel": "bun run cli/skypanel.tsx",
+
     "seed:admin": "node scripts/ensure-admin-user.js",
     "db:reset": "node scripts/reset-database.js",
     "db:reset:confirm": "node scripts/reset-database.js --confirm",

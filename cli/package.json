@@ -1,0 +1,16 @@
+{
+  "name": "skypanel-cli",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run skypanel.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentui/core": "latest",
+    "@opentui/react": "latest",
+    "dotenv": "^17.2.1",
+    "react": "^19.1.0"
+  }
+}

@@ -222,6 +222,34 @@ skypanelv2/
 │       ├── linode-openapi.ts               # Linode API type definitions
 │       └── vercel.d.ts                     # Vercel type declarations
 │
+├── cli/                                    # TUI Admin Console (Bun + OpenTUI + React 19)
+│   ├── skypanel.tsx                        # Entry point: validate config, test API, boot renderer
+│   ├── package.json                        # Bun deps: @opentui/core, @opentui/react, dotenv
+│   ├── tsconfig.json                       # JSX config (jsxImportSource: @opentui/react)
+│   ├── theme.ts                            # Centralized palette + getStatusColor()
+│   ├── lib/
+│   │   ├── client.ts                       # HTTP API client (Bearer auth, normalized URLs)
+│   │   └── config.ts                       # Env var loading and validation
+│   ├── components/
+│   │   ├── App.tsx                         # Root layout: sidebar + content + status bar + toast
+│   │   ├── Sidebar.tsx                     # Navigation sidebar (1-9 screen keys)
+│   │   ├── StatusBar.tsx                   # Connection info bar
+│   │   ├── DataTable.tsx                   # Scrollable list with columns and search
+│   │   ├── DetailPanel.tsx                 # Key-value detail view with action buttons
+│   │   ├── FormDialog.tsx                  # Modal form for inputs
+│   │   ├── ConfirmDialog.tsx               # Destructive action confirmation
+│   │   └── Toast.tsx                       # Success/error notifications
+│   └── screens/
+│       ├── MetricsScreen.tsx               # Dashboard / platform overview
+│       ├── UsersScreen.tsx                 # User management
+│       ├── OrgsScreen.tsx                  # Organization management
+│       ├── VpsScreen.tsx                   # Server power control
+│       ├── HostingScreen.tsx               # Hosting subscription management
+│       ├── TicketsScreen.tsx               # Support ticket management
+│       ├── BillingScreen.tsx               # Billing and transactions
+│       ├── PlatformScreen.tsx              # Platform controls
+│       └── BlogScreen.tsx                  # Blog CMS
+│
 ├── src/                                    # Frontend (React 18 + Vite + TypeScript)
 │   ├── App.tsx                             # Root component, route definitions, providers
 │   ├── main.tsx                            # React DOM entry point
@@ -764,13 +792,6 @@ skypanelv2/
 ├── data/                                   # Static data files
 │   ├── api-docs-audit-report.json
 │   └── api-docs-incomplete.json
-│
-├── deploy/                                 # Deployment configuration
-│   └── fail2ban/                           # Fail2ban rules
-│       ├── filter.d/
-│       │   └── skypanel-leading-space.conf
-│       └── jail.d/
-│           └── skypanel-leading-space.conf
 │
 ├── config/
 │   └── mcporter.json

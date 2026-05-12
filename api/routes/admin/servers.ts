@@ -241,4 +241,104 @@ router.get(
   },
 );
 
+router.post(
+  "/servers/:id/boot",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const instance = await query("SELECT provider_instance_id, provider_id FROM vps_instances WHERE id = $1", [id]);
+      if (instance.rows.length === 0) {
+        return res.status(404).json({ error: "Server not found" });
+      }
+      const { provider_instance_id, provider_id } = instance.rows[0];
+      const provider = await query("SELECT type FROM service_providers WHERE id = $1", [provider_id]);
+      if (provider.rows[0]?.type === "linode" && provider_instance_id) {
+        await linodeService.bootLinodeInstance(Number(provider_instance_id));
+      }
+      await query("UPDATE vps_instances SET status = 'running', updated_at = NOW() WHERE id = $1", [id]);
+      res.json({ success: true, message: "Boot initiated" });
+    } catch (err: any) {
+      console.error("Admin server boot error:", err);
+      res.status(500).json({ error: err.message || "Failed to boot server" });
+    }
+  },
+);
+
+router.post(
+  "/servers/:id/shutdown",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const instance = await query("SELECT provider_instance_id, provider_id FROM vps_instances WHERE id = $1", [id]);
+      if (instance.rows.length === 0) {
+        return res.status(404).json({ error: "Server not found" });
+      }
+      const { provider_instance_id, provider_id } = instance.rows[0];
+      const provider = await query("SELECT type FROM service_providers WHERE id = $1", [provider_id]);
+      if (provider.rows[0]?.type === "linode" && provider_instance_id) {
+        await linodeService.shutdownLinodeInstance(Number(provider_instance_id));
+      }
+      await query("UPDATE vps_instances SET status = 'stopped', updated_at = NOW() WHERE id = $1", [id]);
+      res.json({ success: true, message: "Shutdown initiated" });
+    } catch (err: any) {
+      console.error("Admin server shutdown error:", err);
+      res.status(500).json({ error: err.message || "Failed to shutdown server" });
+    }
+  },
+);
+
+router.post(
+  "/servers/:id/reboot",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const instance = await query("SELECT provider_instance_id, provider_id FROM vps_instances WHERE id = $1", [id]);
+      if (instance.rows.length === 0) {
+        return res.status(404).json({ error: "Server not found" });
+      }
+      const { provider_instance_id, provider_id } = instance.rows[0];
+      const provider = await query("SELECT type FROM service_providers WHERE id = $1", [provider_id]);
+      if (provider.rows[0]?.type === "linode" && provider_instance_id) {
+        await linodeService.rebootLinodeInstance(Number(provider_instance_id));
+      }
+      await query("UPDATE vps_instances SET status = 'running', updated_at = NOW() WHERE id = $1", [id]);
+      res.json({ success: true, message: "Reboot initiated" });
+    } catch (err: any) {
+      console.error("Admin server reboot error:", err);
+      res.status(500).json({ error: err.message || "Failed to reboot server" });
+    }
+  },
+);
+
+router.delete(
+  "/servers/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const instance = await query("SELECT provider_instance_id, provider_id FROM vps_instances WHERE id = $1", [id]);
+      if (instance.rows.length === 0) {
+        return res.status(404).json({ error: "Server not found" });
+      }
+      const { provider_instance_id, provider_id } = instance.rows[0];
+      const provider = await query("SELECT type FROM service_providers WHERE id = $1", [provider_id]);
+      if (provider.rows[0]?.type === "linode" && provider_instance_id) {
+        await linodeService.deleteLinodeInstance(Number(provider_instance_id));
+      }
+      await query("DELETE FROM vps_instances WHERE id = $1", [id]);
+      res.status(204).send();
+    } catch (err: any) {
+      console.error("Admin server delete error:", err);
+      res.status(500).json({ error: err.message || "Failed to delete server" });
+    }
+  },
+);
+
 export default router;

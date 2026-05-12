@@ -126,11 +126,7 @@ npm run dev            # Frontend (5173) + Backend (3001)
 | **Production** | `npm run pm2:start` | Build and start with PM2 |
 | | `npm run pm2:reload` | Graceful PM2 reload |
 | | `npm run pm2:stop` | Stop PM2 processes |
-| **CLI** | `node cli/skypanel.mjs --help` | Admin CLI toolkit (users, billing, VPS, orgs, tickets, hosting) |
-| | `node cli/skypanel.mjs user list` | List/search users |
-| | `node cli/skypanel.mjs admin unlock <email>` | Clear brute-force lockout |
-| | `node cli/skypanel.mjs billing balance <org>` | Check org wallet balance |
-| | `node cli/skypanel.mjs vps list` | List VPS instances |
+| **CLI (TUI)** | `npm run skypanel` | Interactive admin TUI (requires Bun + `SKYPANEL_API_TOKEN`) |
 | **Utilities** | `npm run kill-ports` | Kill ports 3001, 5173, 8000 |
 | | `npm run pwa:icons` | Generate PWA icons |
 

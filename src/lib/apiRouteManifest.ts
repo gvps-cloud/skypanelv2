@@ -1183,6 +1183,30 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": true
   },
   {
+    "method": "DELETE",
+    "path": "/api/admin/servers/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/servers/:id/boot",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/servers/:id/reboot",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/servers/:id/shutdown",
+    "protected": true,
+    "admin": true
+  },
+  {
     "method": "GET",
     "path": "/api/admin/ssh-keys",
     "protected": true,
@@ -1329,6 +1353,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/admin/users/:id/impersonate",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/users/:id/status",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/users/:id/unlock",
     "protected": true,
     "admin": true
   },

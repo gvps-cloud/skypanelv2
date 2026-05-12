@@ -135,6 +135,18 @@ See `repo-docs/ENVIRONMENT_VARIABLES.md` for the full reference. Key required va
 - **Logo**: Source of truth is `public/favicon.svg`; the `Logo` component renders it as an image.
 - **Build**: Vite build includes `removeMockData` plugin that strips example emails/passwords/tokens from production bundles. Do not add sensitive defaults in `src/` files.
 
+## CLI (TUI Admin Console)
+
+- **Location**: `cli/` is a separate **Bun** package. Do not use npm/pnpm inside `cli/`. Install with `cd cli && bun install`.
+- **Entry point**: `cli/skypanel.tsx` validates `SKYPANEL_API_URL` and `SKYPANEL_API_TOKEN`, tests connectivity/admin role via `/api/auth/me`, then boots the OpenTUI renderer.
+- **Launch**: `npm run skypanel` (from root, delegates to `cd cli && bun run skypanel.tsx`).
+- **API client**: `cli/lib/client.ts` — HTTP client with JWT/API-key auth (`sk_live_*` uses `X-API-Key`), normalized base URLs (accepts with or without trailing `/api`), and response wrapper parsing (`{ users }`, `{ stats }`, `{ posts, pagination }`, etc.).
+- **Screens**: Live API consumers under `cli/screens/`. All make real admin API calls to `/api/admin/*` endpoints.
+- **Shared components**: `cli/components/` — DataTable, DetailPanel, FormDialog, ConfirmDialog, Toast, Sidebar, StatusBar.
+- **Theme**: Centralized in `cli/theme.ts` — palette + `getStatusColor()`. All components import from it; do not hardcode colors.
+- **Legacy removed**: The old scripting CLI (`cli/skypanel.mjs`, `cli/commands/*.mjs`, `cli/lib/database.mjs`, `cli/lib/redis.mjs`, `cli/lib/output.mjs`) was fully removed. The CLI is **TUI-only**.
+- **TypeScript**: `cli/tsconfig.json` is independent. Use `npx tsc --noEmit --project cli/tsconfig.json` to typecheck.
+
 ## Database & Migrations
 
 - **Dual System**: Primary path = raw `pg` via `api/lib/database.ts` (used by backend routes). Drizzle ORM via `lib/db` is for schema/types only - new routes should use the `query()` helper.
