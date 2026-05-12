@@ -295,8 +295,13 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
         decorativeIcon={Megaphone}
       />
 
-      {/* Filters */}
+      {/* Filters & Actions */}
       <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Announcement
+        </Button>
+        <div className="flex-1" />
         <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Filter by type" />
