@@ -113,7 +113,7 @@ export default function NetworkingTab({
             <div className="flex flex-col gap-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-primary dark:bg-primary/30">
+                  <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 dark:border-primary/40 dark:bg-primary/20">
                     <Gauge className="h-5 w-5 text-primary" />
                   </div>
                   <div>
@@ -122,7 +122,7 @@ export default function NetworkingTab({
                   </div>
                 </div>
                 {hasTransferData && (
-                  <span className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary dark:bg-primary/40 dark:text-primary" aria-live="polite">
+                  <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:border-primary/40 dark:bg-primary/25 dark:text-primary-foreground" aria-live="polite">
                     {transferUsagePercent.toFixed(0)}%
                   </span>
                 )}

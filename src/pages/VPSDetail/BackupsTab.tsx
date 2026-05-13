@@ -212,7 +212,7 @@ export default function BackupsTab({
         </div>
 
         {backupPricing && (
-          <div className="rounded-xl border border-primary bg-primary px-4 py-4 text-sm text-primary dark:border-primary/40 dark:bg-primary/30 dark:text-primary">
+          <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-4 text-sm text-primary dark:border-primary/40 dark:bg-primary/25 dark:text-primary-foreground">
             <p className="font-semibold">Plan add-on pricing</p>
             <p className="mt-1 text-xs">
               Enabling backups adds {formatCurrency(backupPricing.monthly)} / month ({formatHourlyCurrency(backupPricing.hourly)} hourly) - 40% of your selected plan.
@@ -285,13 +285,16 @@ export default function BackupsTab({
               })}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-input bg-muted/50 px-4 py-6 text-center text-sm text-muted-foreground">
-              No automatic backups captured yet.
+            <div className="rounded-xl border border-dashed border-input bg-muted/50 px-4 py-6 text-center">
+              <p className="text-sm font-medium text-foreground">No automatic backups captured yet.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Enable backups and wait for the next provider snapshot window to populate this list.
+              </p>
             </div>
           )}
 
           {detail?.backups?.snapshot || detail?.backups?.snapshotInProgress ? (
-            <div className="rounded-xl border border-primary bg-primary px-4 py-4 text-sm text-primary dark:border-primary/60 dark:bg-primary/30 dark:text-primary">
+            <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-4 text-sm text-primary dark:border-primary/50 dark:bg-primary/25 dark:text-primary-foreground">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 font-semibold">
                   <Sparkles className="h-4 w-4 text-primary" />

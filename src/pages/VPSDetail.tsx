@@ -2088,7 +2088,7 @@ const VPSDetail: React.FC = () => {
                   {detail?.metrics ? (
                     <>
                       {timeframeLabel && (
-                        <div className="rounded-xl border border-primary bg-primary px-4 py-3 text-xs text-primary dark:border-primary/40 dark:bg-primary/30 dark:text-primary">
+                        <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-xs text-primary dark:border-primary/40 dark:bg-primary/25 dark:text-primary-foreground">
                           Observation window: {timeframeLabel}
                         </div>
                       )}
