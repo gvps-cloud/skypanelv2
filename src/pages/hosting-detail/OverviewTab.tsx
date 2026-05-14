@@ -67,9 +67,10 @@ function formatMoney(value: number | string | null | undefined, currency = "USD"
 
 interface OverviewTabProps {
   service: Record<string, any>;
+  readOnly?: boolean;
 }
 
-export default function OverviewTab({ service }: OverviewTabProps) {
+export default function OverviewTab({ service, readOnly = false }: OverviewTabProps) {
   const [bandwidth, setBandwidth] = useState<Record<string, any> | null>(null);
   const [bandwidthLoading, setBandwidthLoading] = useState(false);
   const [bandwidthError, setBandwidthError] = useState<string | null>(null);
@@ -115,6 +116,9 @@ export default function OverviewTab({ service }: OverviewTabProps) {
 
   const status = service.status || "unknown";
   const billing = billingData?.billing;
+  const planResources = service.plan_features?.resources && typeof service.plan_features.resources === "object"
+    ? service.plan_features.resources
+    : {};
 
   const statusVariant =
     status === "active"
@@ -129,6 +133,33 @@ export default function OverviewTab({ service }: OverviewTabProps) {
     || website?.serverIps?.[0]?.ip
     || service.primary_ip
     || "—";
+
+  const websiteStatus = website?.isSuspended || website?.suspendedBy
+    ? "suspended"
+    : website?.status || service.website_status || status;
+
+  const resellerResourceFields = [
+    { key: "customers", label: "Customer Accounts" },
+    { key: "websites", label: "Websites" },
+    { key: "addonDomains", label: "Addon Domains" },
+    { key: "subdomains", label: "Subdomains" },
+    { key: "domainAliases", label: "Domain Aliases" },
+    { key: "mailboxes", label: "Mailboxes" },
+    { key: "mysqlDbs", label: "MySQL Databases" },
+    { key: "ftpUsers", label: "FTP Users" },
+  ]
+    .map((resource) => ({
+      ...resource,
+      value: planResources?.[resource.key],
+    }))
+    .filter((resource) => resource.value);
+
+  const formatResourceLimit = (resource: any) => {
+    const total = resource?.total;
+    if (total === null || typeof total === "undefined") return "Unlimited";
+    const parsed = Number(total);
+    return Number.isFinite(parsed) ? parsed.toLocaleString() : "—";
+  };
 
   const monthlyTransferBytes = bandwidth?.monthlyTransferBytes ?? bandwidth?.used ?? null;
   const transferQuotaBytes = bandwidth?.transferQuotaBytes ?? bandwidth?.limit ?? null;
@@ -146,6 +177,14 @@ export default function OverviewTab({ service }: OverviewTabProps) {
       value: (
         <Badge variant={statusVariant as any}>
           {status}
+        </Badge>
+      ),
+    },
+    {
+      label: "Website Status",
+      value: (
+        <Badge variant={(websiteStatus === "active" ? "default" : websiteStatus === "suspended" || websiteStatus === "disabled" ? "destructive" : "outline") as any}>
+          {websiteStatus}
         </Badge>
       ),
     },
@@ -242,15 +281,17 @@ export default function OverviewTab({ service }: OverviewTabProps) {
                 Renewals are charged from the dedicated hosting wallet.
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleGenerateHostingInvoice}
-              disabled={invoiceLoading || billingLoading || !billing?.cycles?.length}
-            >
-              <FileText className="mr-1.5 h-3 w-3" />
-              {invoiceLoading ? "Generating..." : "Generate Invoice"}
-            </Button>
+            {!readOnly && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateHostingInvoice}
+                disabled={invoiceLoading || billingLoading || !billing?.cycles?.length}
+              >
+                <FileText className="mr-1.5 h-3 w-3" />
+                {invoiceLoading ? "Generating..." : "Generate Invoice"}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -352,6 +393,24 @@ export default function OverviewTab({ service }: OverviewTabProps) {
         </CardContent>
       </Card>
 
+      {readOnly && resellerResourceFields.length > 0 && (
+        <Card className="border-primary/25">
+          <CardHeader>
+            <CardTitle>Package Resource Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {resellerResourceFields.map((resource) => (
+                <div key={resource.key} className="rounded-md border p-3">
+                  <dt className="text-sm font-medium text-muted-foreground">{resource.label}</dt>
+                  <dd className="mt-1 text-lg font-semibold">{formatResourceLimit(resource.value)}</dd>
+                </div>
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Bandwidth Card */}
       {service?.enhance_subscription_id && (
         <Card className="border-primary/25">
@@ -366,15 +425,17 @@ export default function OverviewTab({ service }: OverviewTabProps) {
                   Current-month subscription bandwidth from Enhance, plus month-to-date website metrics when available.
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadBandwidth(true)}
-                disabled={bandwidthLoading}
-              >
-                <RefreshCw className={`mr-1.5 h-3 w-3 ${bandwidthLoading ? "animate-spin" : ""}`} />
-                Refresh Usage
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadBandwidth(true)}
+                  disabled={bandwidthLoading}
+                >
+                  <RefreshCw className={`mr-1.5 h-3 w-3 ${bandwidthLoading ? "animate-spin" : ""}`} />
+                  Refresh Usage
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>

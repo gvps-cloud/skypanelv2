@@ -76,6 +76,7 @@ describe('Hosting Store Routes', () => {
   let jwt: typeof import('jsonwebtoken');
   let planId: string;
   let inactivePlanId: string;
+  let resellerPlanId: string;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -168,6 +169,22 @@ describe('Hosting Store Routes', () => {
     );
     inactivePlanId = inactivePlanResult.rows[0].id;
 
+    const resellerPlanResult = await pool.query(
+      `INSERT INTO hosting_plans (id, enhance_plan_id, name, description, features, service_type, price_monthly, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), NOW())
+       RETURNING id`,
+      [
+        randomUUID(),
+        '103',
+        'Reseller Hosting',
+        'Reseller plan',
+        JSON.stringify({ resources: { customers: { total: 10 }, websites: { total: 50 }, mailboxes: { total: 100 } } }),
+        'web',
+        30.00,
+      ]
+    );
+    resellerPlanId = resellerPlanResult.rows[0].id;
+
     // Ensure platform_integrations has enhance row
     await pool.query(
       `INSERT INTO platform_integrations (slug, display_name, enabled, created_at, updated_at)
@@ -184,7 +201,7 @@ describe('Hosting Store Routes', () => {
 
   afterAll(async () => {
     await pool.query('DELETE FROM hosting_subscriptions WHERE organization_id = $1', [testOrgId]);
-    await pool.query('DELETE FROM hosting_plans WHERE id = $1 OR id = $2', [planId, inactivePlanId]);
+    await pool.query('DELETE FROM hosting_plans WHERE id = $1 OR id = $2 OR id = $3', [planId, inactivePlanId, resellerPlanId]);
     await pool.query('DELETE FROM payment_transactions WHERE organization_id = $1', [testOrgId]);
     await pool.query('DELETE FROM hosting_wallets WHERE organization_id = $1', [testOrgId]);
     await pool.query('DELETE FROM wallets WHERE organization_id = $1', [testOrgId]);
@@ -206,6 +223,37 @@ describe('Hosting Store Routes', () => {
       const planIds = response.body.plans.map((p: any) => p.id);
       expect(planIds).toContain(planId);
       expect(planIds).not.toContain(inactivePlanId);
+    });
+  });
+
+  describe('GET /api/hosting/services', () => {
+    it('marks reseller plan services as reseller subscriptions', async () => {
+      const subResult = await pool.query(
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
+         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', 'web-reseller-1', 'sub-reseller-1')
+         RETURNING id`,
+        [testOrgId, testUserId, resellerPlanId, 'reseller-summary-test.com']
+      );
+      const subId = subResult.rows[0].id;
+
+      const listResponse = await request(app)
+        .get('/api/hosting/services')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const listedService = listResponse.body.services.find((service: any) => service.id === subId);
+      expect(listedService.is_reseller_plan).toBe(true);
+      expect(listedService.plan_features.resources.customers.total).toBe(10);
+
+      const detailResponse = await request(app)
+        .get(`/api/hosting/services/${subId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(detailResponse.body.service.is_reseller_plan).toBe(true);
+      expect(detailResponse.body.service.plan_features.resources.websites.total).toBe(50);
+
+      await pool.query('DELETE FROM hosting_subscriptions WHERE id = $1', [subId]);
     });
   });
 
@@ -460,7 +508,7 @@ describe('Hosting Store Routes', () => {
       await pool.query('DELETE FROM hosting_plans WHERE id = $1', [sgPlanId]);
     });
 
-    it('reuses an orphaned Enhance subscription after a 409 conflict when no websites exist', async () => {
+    it('reuses an Enhance subscription after a 409 conflict even when websites exist', async () => {
       const { EnhanceApiError } = await import('../../services/enhanceService.js');
 
       await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
@@ -483,8 +531,9 @@ describe('Hosting Store Routes', () => {
       mockGetCustomerSubscriptions.mockResolvedValue({
         items: [{ id: 444, planId: 101 }],
       });
-      mockGetWebsites.mockResolvedValue({ items: [] });
+      mockGetWebsites.mockResolvedValue({ items: [{ id: 'existing-web-1', domain: 'existing-site.com' }] });
       mockCreateWebsite.mockResolvedValue({ id: 'web-444', serverIps: [{ ip: '1.2.3.4', isPrimary: true }] });
+      mockGetWebsite.mockResolvedValue({ id: 'web-444', serverIps: [{ ip: '1.2.3.4', isPrimary: true }] });
 
       const response = await request(app)
         .post('/api/hosting/purchase')
@@ -494,11 +543,24 @@ describe('Hosting Store Routes', () => {
 
       expect(response.body.subscription.status).toBe('active');
       expect(mockGetCustomerSubscriptions).toHaveBeenCalledWith(expect.any(String), 'cust-123');
+      expect(mockGetWebsites).not.toHaveBeenCalled();
       expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
         subscriptionId: 444,
         domain: 'orphan-reuse-test.com',
       });
       expect(mockDeleteSubscription).not.toHaveBeenCalled();
+
+      const createdRows = await pool.query(
+        `SELECT enhance_subscription_id, enhance_website_id, domain, status
+         FROM hosting_subscriptions
+         WHERE organization_id = $1 AND domain = $2
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [testOrgId, 'orphan-reuse-test.com']
+      );
+      expect(createdRows.rows[0].enhance_subscription_id).toBe('444');
+      expect(createdRows.rows[0].enhance_website_id).toBe('web-444');
+      expect(createdRows.rows[0].status).toBe('active');
     });
 
     it('returns a 400 with the Enhance domain message and cleans up a created subscription', async () => {
@@ -560,6 +622,55 @@ describe('Hosting Store Routes', () => {
   });
 
   describe('POST /api/hosting/services/:id/cancel', () => {
+    it('cancels reseller hosting subscriptions and issues a prorated refund', async () => {
+      await pool.query(
+        'UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2',
+        ['cust-org-reseller', testOrgId]
+      );
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+
+      const subResult = await pool.query(
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
+         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', 'web-reseller-cancel', 'sub-reseller-cancel')
+         RETURNING id`,
+        [testOrgId, testUserId, resellerPlanId, 'reseller-cancel-test.com']
+      );
+      const subId = subResult.rows[0].id;
+
+      mockDeleteWebsite.mockResolvedValue(undefined);
+      mockDeleteSubscription.mockResolvedValue(undefined);
+
+      const response = await request(app)
+        .post(`/api/hosting/services/${subId}/cancel`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(mockDeleteWebsite).toHaveBeenCalledWith('cust-org-reseller', 'web-reseller-cancel');
+      expect(mockDeleteSubscription).toHaveBeenCalledWith('cust-org-reseller', 'sub-reseller-cancel');
+
+      const updatedSub = await pool.query(
+        'SELECT status FROM hosting_subscriptions WHERE id = $1',
+        [subId]
+      );
+      expect(updatedSub.rows[0].status).toBe('cancelled');
+
+      const refundTxnResult = await pool.query(
+        `SELECT amount, metadata
+         FROM payment_transactions
+         WHERE organization_id = $1
+           AND amount > 0
+           AND metadata->>'wallet_type' = 'hosting'
+           AND metadata->>'hosting_subscription_id' = $2
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [testOrgId, subId]
+      );
+      expect(refundTxnResult.rows.length).toBe(1);
+      expect(Number(refundTxnResult.rows[0].amount)).toBeGreaterThan(0);
+    });
+
     it('resolves org-scoped subscription', async () => {
       await pool.query(
         'UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2',

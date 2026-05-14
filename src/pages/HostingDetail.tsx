@@ -22,6 +22,7 @@ import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { TerminalPageHeader } from "@/components/terminal";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import OverviewTab from "./hosting-detail/OverviewTab";
 import WebTab from "./hosting-detail/WebTab";
 import DnsTab from "./hosting-detail/DnsTab";
@@ -61,6 +62,8 @@ export default function HostingDetail() {
   const [service, setService] = useState<Record<string, any> | null>(null);
   const [serviceLoading, setServiceLoading] = useState(true);
   const [ssoLoading, setSsoLoading] = useState(false);
+  const isResellerPlan = service?.is_reseller_plan === true;
+  const visibleTabs = isResellerPlan ? tabs.filter((tab) => tab.id === "overview") : tabs;
 
   const loadService = useCallback(async () => {
     if (!id) return;
@@ -70,6 +73,9 @@ export default function HostingDetail() {
         `/hosting/services/${id}`
       );
       setService(data.service ?? null);
+      if (data.service?.is_reseller_plan) {
+        setActiveTab("overview");
+      }
     } catch {
       toast.error("No active hosting plan found.");
       navigate("/hosting", { replace: true });
@@ -119,47 +125,75 @@ export default function HostingDetail() {
             <h1 className="text-2xl font-bold tracking-tight">
               {service?.domain || service?.plan_name || "Hosting Details"}
             </h1>
-            <p className="text-sm text-muted-foreground">Manage your hosting subscription and website settings.</p>
+            <p className="text-sm text-muted-foreground">
+              {isResellerPlan
+                ? "View your reseller hosting summary and open Enhance for management."
+                : "Manage your hosting subscription and website settings."}
+            </p>
           </div>
         </div>
-        <Button variant="outline" onClick={handleSso} disabled={serviceLoading || ssoLoading || !service}>
-          {ssoLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <ExternalLink className="mr-2 h-4 w-4" />
-          )}
-          Open Enhance Panel
-        </Button>
+        {!isResellerPlan && (
+          <Button variant="outline" onClick={handleSso} disabled={serviceLoading || ssoLoading || !service}>
+            {ssoLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ExternalLink className="mr-2 h-4 w-4" />
+            )}
+            Open Enhance Panel
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar Tabs */}
-        <div className="w-full lg:w-64 shrink-0">
-          <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 no-scrollbar">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "flex items-center gap-3 border-l-2 border-transparent px-3 py-2.5 text-sm font-medium rounded-sm transition-colors whitespace-nowrap",
-                    activeTab === tab.id
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
+        {!isResellerPlan && (
+          <div className="w-full lg:w-64 shrink-0">
+            <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 no-scrollbar">
+              {visibleTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "flex items-center gap-3 border-l-2 border-transparent px-3 py-2.5 text-sm font-medium rounded-sm transition-colors whitespace-nowrap",
+                      activeTab === tab.id
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        )}
 
         {/* Tab Content */}
         <div className="flex-1 min-w-0">
           <div className="space-y-6">
+            {isResellerPlan && (
+              <Card className="border-primary/25 bg-primary/5">
+                <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-base font-semibold">Reseller hosting is managed in Enhance</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      This page is read-only. Use the Enhance panel to manage reseller customers, packages, websites, DNS, email, SSL, databases, apps, backups, cron, and SSH access.
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={handleSso} disabled={serviceLoading || ssoLoading || !service}>
+                    {ssoLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                    )}
+                    Open Enhance Panel
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             {activeTab === "overview" &&
               (serviceLoading ? (
                 <div className="flex items-center justify-center py-12 rounded-xl border border-dashed border-border bg-card/50">
@@ -169,21 +203,21 @@ export default function HostingDetail() {
                   </span>
                 </div>
               ) : (
-                <OverviewTab service={service ?? {}} />
+                <OverviewTab service={service ?? {}} readOnly={isResellerPlan} />
               ))}
-            {activeTab === "web" && <WebTab subscriptionId={id} />}
-            {activeTab === "dns" && <DnsTab subscriptionId={id} />}
-            {activeTab === "email" && <EmailTab subscriptionId={id} />}
-            {activeTab === "ftp" && <FtpTab subscriptionId={id} />}
-            {activeTab === "ssl" && <SslTab subscriptionId={id} />}
-            {activeTab === "mysql" && <MysqlTab subscriptionId={id} />}
-            {activeTab === "apps" && <AppsTab subscriptionId={id} />}
-            {activeTab === "wordpress" && <WordPressTab subscriptionId={id} />}
-            {activeTab === "joomla" && <JoomlaTab subscriptionId={id} />}
-            {activeTab === "runtime" && <RuntimeTab subscriptionId={id} />}
-            {activeTab === "backups" && <BackupsTab subscriptionId={id} />}
-            {activeTab === "cron" && <CronTab subscriptionId={id} />}
-            {activeTab === "ssh" && <SshKeysTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "web" && <WebTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "dns" && <DnsTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "email" && <EmailTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "ftp" && <FtpTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "ssl" && <SslTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "mysql" && <MysqlTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "apps" && <AppsTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "wordpress" && <WordPressTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "joomla" && <JoomlaTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "runtime" && <RuntimeTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "backups" && <BackupsTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "cron" && <CronTab subscriptionId={id} />}
+            {!isResellerPlan && activeTab === "ssh" && <SshKeysTab subscriptionId={id} />}
           </div>
         </div>
       </div>

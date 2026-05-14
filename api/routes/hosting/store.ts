@@ -38,6 +38,54 @@ const extractCollection = <T,>(value: any): T[] => {
 const createHttpError = (message: string, statusCode: number, responseBody?: any) =>
   Object.assign(new Error(message), { statusCode, responseBody });
 
+function parsePlanFeatures(value: any): Record<string, any> {
+  if (!value) return {};
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return {};
+    }
+  }
+  return typeof value === "object" ? value : {};
+}
+
+function getPlanResource(features: Record<string, any>, resourceName: string): any {
+  const resources = features?.resources;
+  const normalizedName = resourceName.toLowerCase();
+
+  if (Array.isArray(resources)) {
+    return resources.find((resource) => String(resource?.name ?? "").toLowerCase() === normalizedName) ?? null;
+  }
+
+  if (resources && typeof resources === "object") {
+    const exact = resources[resourceName] ?? resources[normalizedName];
+    if (exact) return exact;
+
+    const matchedKey = Object.keys(resources).find((key) => key.toLowerCase() === normalizedName);
+    return matchedKey ? resources[matchedKey] : null;
+  }
+
+  return null;
+}
+
+function isResellerPlanFeatures(features: Record<string, any>): boolean {
+  const customersResource = getPlanResource(features, "customers");
+  if (!customersResource) return false;
+
+  const total = readNumber(customersResource?.total);
+  return total === null || total > 0;
+}
+
+function withHostingPlanMetadata(row: any): any {
+  const planFeatures = parsePlanFeatures(row.plan_features);
+  return {
+    ...row,
+    plan_features: planFeatures,
+    is_reseller_plan: isResellerPlanFeatures(planFeatures),
+  };
+}
+
 router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers);
 
 function readBooleanQuery(value: unknown): boolean | undefined {
@@ -179,7 +227,8 @@ router.get("/services", requireOrgPermission("hosting_view"), async (req: Reques
     const result = await query(
       `SELECT hs.id, hs.domain, hs.status, hs.primary_ip, hs.next_billing_at, hs.created_at, hs.cancelled_at,
               hs.enhance_website_id, org.enhance_customer_id AS enhance_customer_org_id,
-              hp.id as plan_id, hp.name as plan_name, hp.service_type, hp.price_monthly, hp.enhance_plan_id
+              hp.id as plan_id, hp.name as plan_name, hp.service_type, hp.price_monthly, hp.enhance_plan_id,
+              hp.features AS plan_features
        FROM hosting_subscriptions hs
        LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
        LEFT JOIN organizations org ON org.id = hs.organization_id
@@ -215,7 +264,7 @@ router.get("/services", requireOrgPermission("hosting_view"), async (req: Reques
       }
     }
 
-    res.json({ services: result.rows });
+    res.json({ services: result.rows.map(withHostingPlanMetadata) });
   } catch (error) {
     console.error("Failed to get hosting services:", error);
     res.status(500).json({ error: "Failed to get hosting services" });
@@ -231,7 +280,8 @@ router.get("/services/:id", requireOrgPermission("hosting_view"), async (req: Re
   const { id } = req.params;
   try {
     const result = await query(
-      `SELECT hs.*, hp.name as plan_name, hp.service_type
+      `SELECT hs.*, hp.name as plan_name, hp.service_type, hp.price_monthly, hp.enhance_plan_id,
+              hp.features AS plan_features
        FROM hosting_subscriptions hs
        LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
        WHERE hs.id = $1 AND hs.organization_id = $2 AND hs.status <> 'cancelled'`,
@@ -241,7 +291,7 @@ router.get("/services/:id", requireOrgPermission("hosting_view"), async (req: Re
       return res.status(404).json({ error: "Service not found" });
     }
 
-    const service = result.rows[0];
+    const service = withHostingPlanMetadata(result.rows[0]);
 
     // Retroactively sync primary IP from Enhance if missing
     if (!service.primary_ip && service.enhance_website_id) {
@@ -568,17 +618,6 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         );
       }
 
-      const existingWebsites = extractCollection<any>(
-        await EnhanceService.getWebsites(onboardingResult.enhanceCustomerId)
-      );
-      if (existingWebsites.length > 0) {
-        throw createHttpError(
-          "This hosting account already has an existing Enhance subscription with website data. Please cancel the existing service or contact support before purchasing again.",
-          409,
-          subError.responseBody,
-        );
-      }
-
       enhanceSubscription = matchedSubscription;
     }
     const enhanceSubscriptionId = Number(enhanceSubscription.id);
@@ -829,16 +868,18 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
 
   try {
     const result = await query(
-      `SELECT hs.*, org.enhance_customer_id AS enhance_customer_org_id
+      `SELECT hs.*, org.enhance_customer_id AS enhance_customer_org_id,
+              hp.features AS plan_features
        FROM hosting_subscriptions hs
        JOIN organizations org ON org.id = hs.organization_id
+       LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
        WHERE hs.id = $1 AND hs.organization_id = $2`,
       [id, organizationId]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Service not found" });
     }
-    const sub = result.rows[0];
+    const sub = withHostingPlanMetadata(result.rows[0]);
     const enhanceCustomerOrgId = sub.enhance_customer_org_id;
 
     if (!enhanceCustomerOrgId && (sub.enhance_website_id || sub.enhance_subscription_id)) {

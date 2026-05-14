@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OverviewTab from "./OverviewTab";
@@ -67,8 +68,35 @@ function setupApiMocks() {
     if (path.endsWith("/website")) {
       return { serverIps: [{ ip: "85.239.231.165", isPrimary: true }] };
     }
+    if (path.endsWith("/billing")) {
+      return {
+        billing: {
+          paymentStatus: "current",
+          renewalAmount: 10,
+          currency: "USD",
+          hostingWalletBalance: 50,
+          nextBillingAt: "2026-06-02T04:16:59Z",
+          cycles: [],
+          refunds: [],
+        },
+      };
+    }
     throw new Error(`Unhandled GET ${path}`);
   });
+}
+
+function renderOverview(readOnly = false, overrides: Record<string, any> = {}) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <OverviewTab service={{ ...service, ...overrides }} readOnly={readOnly} />
+    </QueryClientProvider>
+  );
 }
 
 describe("OverviewTab bandwidth", () => {
@@ -78,7 +106,7 @@ describe("OverviewTab bandwidth", () => {
   });
 
   it("renders zero monthly transfer as 0 B with quota and metrics details", async () => {
-    render(<OverviewTab service={service} />);
+    renderOverview();
 
     expect(await screen.findByText("Monthly transfer used")).toBeInTheDocument();
     expect(screen.getAllByText("0 B").length).toBeGreaterThan(0);
@@ -99,7 +127,7 @@ describe("OverviewTab bandwidth", () => {
 
   it("requests a fresh Enhance bandwidth cache refresh", async () => {
     const user = userEvent.setup();
-    render(<OverviewTab service={service} />);
+    renderOverview();
 
     await screen.findByText("Monthly transfer used");
     await user.click(screen.getByRole("button", { name: /refresh usage/i }));
@@ -108,5 +136,25 @@ describe("OverviewTab bandwidth", () => {
       expect(apiMocks.get).toHaveBeenCalledWith("/hosting/services/sub-123/bandwidth?refreshCache=true");
     });
     expect(await screen.findByText("A fresh Enhance cache refresh was requested.")).toBeInTheDocument();
+  });
+
+  it("renders reseller overview as read-only with package resources", async () => {
+    renderOverview(true, {
+      is_reseller_plan: true,
+      plan_features: {
+        resources: {
+          customers: { total: 10 },
+          websites: { total: 50 },
+        },
+      },
+    });
+
+    expect(await screen.findByText("Package Resource Summary")).toBeInTheDocument();
+    expect(screen.getByText("Customer Accounts")).toBeInTheDocument();
+    expect(screen.getByText("Websites")).toBeInTheDocument();
+    expect(screen.getAllByText("10").length).toBeGreaterThan(0);
+    expect(screen.getByText("50")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /refresh usage/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /generate invoice/i })).not.toBeInTheDocument();
   });
 });

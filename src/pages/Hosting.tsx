@@ -46,6 +46,7 @@ interface HostingService {
   service_type: string | null;
   price_monthly: number | null;
   enhance_plan_id: string | null;
+  is_reseller_plan?: boolean;
 }
 
 const statusBadgeVariant = (status: string) => {
@@ -294,6 +295,7 @@ export default function Hosting() {
             <TableBody>
               {pageItems.map((service) => {
                 const isActive = service.status === "active";
+                const isResellerPlan = service.is_reseller_plan === true;
                 return (
                   <TableRow
                     key={service.id}
@@ -316,9 +318,14 @@ export default function Hosting() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {service.plan_name ?? (
-                        <span className="text-muted-foreground italic">Unknown plan</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {service.plan_name ?? (
+                            <span className="text-muted-foreground italic">Unknown plan</span>
+                          )}
+                        </span>
+                        {isResellerPlan && <Badge variant="secondary">Reseller</Badge>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusBadgeVariant(service.status)}>
@@ -348,7 +355,7 @@ export default function Hosting() {
                                 navigate(`/hosting/${service.id}`);
                               }}
                             >
-                              Manage
+                              {isResellerPlan ? "View Summary" : "Manage"}
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -380,7 +387,10 @@ export default function Hosting() {
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Keep subscription</AlertDialogCancel>
                                   <AlertDialogAction
-                                    onClick={() => handleCancel(service.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCancel(service.id);
+                                    }}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
                                     Cancel subscription
