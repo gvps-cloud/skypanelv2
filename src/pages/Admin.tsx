@@ -174,6 +174,10 @@ const VPSPlanWizard = lazy(async () => {
   const mod = await import("@/components/admin/VPSPlanWizard");
   return { default: mod.VPSPlanWizard };
 });
+const VPSPlanRegionWizard = lazy(async () => {
+  const mod = await import("@/components/admin/VPSPlanRegionWizard");
+  return { default: mod.VPSPlanRegionWizard };
+});
 const EgressCreditManager = lazy(
   () => import("@/components/admin/EgressCreditManager"),
 );
@@ -448,6 +452,28 @@ interface VPSPlan {
   provider_name?: string;
   provider_type?: string;
 }
+
+const BACKUP_POLICY_TOOLTIP_TEXT =
+  "Linode runs automatic daily backups; this policy controls what frequency SkyPanel exposes during provisioning/billing.";
+
+export const getBackupPolicyLabel = (
+  dailyBackupsEnabled: boolean,
+  weeklyBackupsEnabled: boolean,
+): string => {
+  if (dailyBackupsEnabled && weeklyBackupsEnabled) {
+    return "Policy: Daily + Weekly";
+  }
+
+  if (dailyBackupsEnabled && !weeklyBackupsEnabled) {
+    return "Policy: Daily";
+  }
+
+  if (!dailyBackupsEnabled && weeklyBackupsEnabled) {
+    return "Policy: Weekly";
+  }
+
+  return "Policy: Disabled";
+};
 
 interface AdminServerInstance {
   id: string;
@@ -859,6 +885,9 @@ const Admin: React.FC = () => {
   });
   const [editPlanId, setEditPlanId] = useState<string | null>(null);
   const [editPlan, setEditPlan] = useState<EditablePlanState>({});
+  const [regionEditPlanId, setRegionEditPlanId] = useState<string | null>(null);
+  const [regionEditWizardOpen, setRegionEditWizardOpen] = useState(false);
+  const [regionEditSaving, setRegionEditSaving] = useState(false);
   const [deletePlanId, setDeletePlanId] = useState<string | null>(null);
   const plansPerPage = 10;
 
@@ -1170,6 +1199,11 @@ const Admin: React.FC = () => {
     });
     return groups;
   }, [filteredPlans]);
+
+  const regionEditPlan = useMemo(
+    () => plans.find((plan) => plan.id === regionEditPlanId) ?? null,
+    [plans, regionEditPlanId],
+  );
 
   const serverStatusOptions = useMemo(() => {
     const statuses = new Set<string>();
@@ -1762,6 +1796,35 @@ const Admin: React.FC = () => {
       toast.success("Plan updated");
     } catch (e: any) {
       toast.error(e.message);
+    }
+  };
+
+  const openRegionEditWizard = (planId: string) => {
+    setRegionEditPlanId(planId);
+    setRegionEditWizardOpen(true);
+  };
+
+  const handleRegionEditWizardOpenChange = (open: boolean) => {
+    setRegionEditWizardOpen(open);
+    if (!open && !regionEditSaving) {
+      setRegionEditPlanId(null);
+    }
+  };
+
+  const savePlanRegions = async (regions: string[]) => {
+    if (!regionEditPlanId) return;
+
+    setRegionEditSaving(true);
+    try {
+      await apiClient.put(`/admin/plans/${regionEditPlanId}`, { regions });
+      await fetchPlans();
+      setRegionEditWizardOpen(false);
+      setRegionEditPlanId(null);
+      toast.success("Plan regions updated");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update plan regions");
+    } finally {
+      setRegionEditSaving(false);
     }
   };
 
@@ -2841,6 +2904,14 @@ const Admin: React.FC = () => {
                                     <>
                                       <Button
                                         size="sm"
+                                        variant="secondary"
+                                        onClick={() => openRegionEditWizard(plan.id)}
+                                        className="flex-1"
+                                      >
+                                        <Globe className="h-4 w-4 mr-1" /> Regions
+                                      </Button>
+                                      <Button
+                                        size="sm"
                                         variant="outline"
                                         onClick={() => {
                                           setEditPlanId(plan.id);
@@ -3263,13 +3334,26 @@ const Admin: React.FC = () => {
                                         )}
                                       </TableCell>
                                       <TableCell>
-                                        {/* Backups are always daily via Linode - just show enabled status */}
-                                        <Badge
-                                          variant="outline"
-                                          className="w-fit text-xs bg-green-500/10 text-green-500 border-green-500/30"
-                                        >
-                                          Daily
-                                        </Badge>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Badge
+                                                variant="outline"
+                                                className="w-fit cursor-help text-xs bg-green-500/10 text-green-500 border-green-500/30"
+                                              >
+                                                {getBackupPolicyLabel(
+                                                  plan.daily_backups_enabled ??
+                                                    false,
+                                                  plan.weekly_backups_enabled ??
+                                                    false,
+                                                )}
+                                              </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="max-w-xs text-xs">
+                                              {BACKUP_POLICY_TOOLTIP_TEXT}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                       </TableCell>
                                       <TableCell>
                                         {isEditing ? (
@@ -3331,6 +3415,17 @@ const Admin: React.FC = () => {
                                           </div>
                                         ) : (
                                           <div className="flex justify-end gap-2">
+                                            <Button
+                                              size="sm"
+                                              variant="secondary"
+                                              onClick={() =>
+                                                openRegionEditWizard(plan.id)
+                                              }
+                                              className="gap-1"
+                                            >
+                                              <Globe className="h-4 w-4" />{" "}
+                                              Regions
+                                            </Button>
                                             <Button
                                               size="sm"
                                               variant="outline"
@@ -3419,6 +3514,17 @@ const Admin: React.FC = () => {
             }}
             onSubmit={createVPSPlan}
             regions={_allowedLinodeRegions}
+          />
+          <VPSPlanRegionWizard
+            open={regionEditWizardOpen}
+            onOpenChange={handleRegionEditWizardOpenChange}
+            plan={regionEditPlan}
+            regions={_allowedLinodeRegions}
+            initialSelectedRegions={
+              regionEditPlan?.regions?.map((region) => region.region_id) ?? []
+            }
+            saving={regionEditSaving}
+            onSave={savePlanRegions}
           />
         </SectionPanel>
 
