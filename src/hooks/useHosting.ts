@@ -24,6 +24,7 @@ export interface HostingPlan {
   service_type: string;
   price_monthly: number | string;
   is_active?: boolean;
+  is_reseller_plan?: boolean;
 }
 
 export interface HostingBillingCycle {

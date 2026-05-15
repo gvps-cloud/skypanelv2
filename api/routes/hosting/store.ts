@@ -168,7 +168,15 @@ router.get("/plans", async (req: Request, res: Response) => {
       `SELECT id, enhance_plan_id, name, description, features, service_type, price_monthly
        FROM hosting_plans WHERE is_active = true ORDER BY price_monthly ASC`
     );
-    res.json({ plans: result.rows });
+    const plans = result.rows.map((row: any) => {
+      const planFeatures = parsePlanFeatures(row.features);
+      return {
+        ...row,
+        features: planFeatures,
+        is_reseller_plan: isResellerPlanFeatures(planFeatures),
+      };
+    });
+    res.json({ plans });
   } catch (error) {
     console.error("Failed to get hosting plans:", error);
     res.status(500).json({ error: "Failed to get hosting plans" });

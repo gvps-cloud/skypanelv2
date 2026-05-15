@@ -64,6 +64,10 @@ export default function HostingStore() {
   const plans: HostingPlan[] = plansData?.plans ?? [];
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
   const features = selectedPlan?.features;
+  const isReseller = selectedPlan?.is_reseller_plan === true;
+  const customerLimit = isReseller
+    ? formatResource(features?.resources?.customers?.total)
+    : null;
 
   const handlePurchase = async () => {
     if (!selectedPlanId) {
@@ -183,9 +187,13 @@ export default function HostingStore() {
                       </TableCell>
                       <TableCell className="font-medium">{plan.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {f?.planType || plan.service_type}
-                        </Badge>
+                        {plan.is_reseller_plan ? (
+                          <Badge variant="secondary">Reseller</Badge>
+                        ) : (
+                          <Badge variant="outline" className="capitalize">
+                            {f?.planType || plan.service_type}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>{formatResource(r?.websites?.total)}</TableCell>
                       <TableCell>
@@ -238,11 +246,13 @@ export default function HostingStore() {
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                    {features?.planType && (
+                    {isReseller ? (
+                      <Badge variant="secondary">Reseller</Badge>
+                    ) : features?.planType ? (
                       <Badge variant="outline" className="capitalize">
                         {features.planType}
                       </Badge>
-                    )}
+                    ) : null}
                     {features?.redisAllowed && (
                       <Badge variant="secondary" className="text-xs">
                         Redis
@@ -258,7 +268,14 @@ export default function HostingStore() {
 
                 {/* Domain section */}
                 <div className="space-y-3">
-                  <Label htmlFor="domain">Domain</Label>
+                  <Label htmlFor="domain">
+                    {isReseller ? "Primary Reseller Domain" : "Domain"}
+                  </Label>
+                  {isReseller && (
+                    <p className="text-xs text-muted-foreground">
+                      This will be the primary domain for your reseller organization.
+                    </p>
+                  )}
                   <Input
                     id="domain"
                     placeholder="example.com"
@@ -266,6 +283,17 @@ export default function HostingStore() {
                     onChange={(e) => setDomain(e.target.value)}
                   />
                 </div>
+
+                {isReseller && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm space-y-1">
+                    <p className="font-medium">Reseller Plan</p>
+                    <p className="text-muted-foreground">
+                      This plan lets you host customer accounts under your organization.
+                      You can manage up to <span className="font-medium text-foreground">{customerLimit}</span> customer
+                      {customerLimit === "1" ? "" : "s"}.
+                    </p>
+                  </div>
+                )}
 
                 {/* Region selector - only if plan allows server group selection */}
                 {features?.allowServerGroupSelection && regionsData?.regions && regionsData.regions.length > 0 && (
@@ -289,16 +317,34 @@ export default function HostingStore() {
                 {/* Info box */}
                 <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground space-y-1">
                   <p className="font-medium text-foreground">What happens next?</p>
-                  <p>Purchasing creates your hosting account and provisions:</p>
-                  <ul className="list-disc list-inside space-y-0.5 ml-1">
-                    <li>An Enhance customer organization</li>
-                    <li>Your login and member access</li>
-                    <li>A subscription to the selected plan</li>
-                    <li>A website with your chosen domain</li>
-                  </ul>
-                  <p className="pt-1">
-                    Your hosting panel credentials will be emailed to you automatically.
-                  </p>
+                  {isReseller ? (
+                    <>
+                      <p>Purchasing this reseller plan provisions:</p>
+                      <ul className="list-disc list-inside space-y-0.5 ml-1">
+                        <li>A reseller organization with customer management capabilities</li>
+                        <li>Your login and member access</li>
+                        <li>A subscription with capacity for {customerLimit} customer{customerLimit === "1" ? "" : "s"}</li>
+                        <li>A primary website with your chosen domain</li>
+                      </ul>
+                      <p className="pt-1">
+                        You will be able to create and manage customer accounts through the hosting panel.
+                        Your credentials will be emailed to you automatically.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Purchasing creates your hosting account and provisions:</p>
+                      <ul className="list-disc list-inside space-y-0.5 ml-1">
+                        <li>An Enhance customer organization</li>
+                        <li>Your login and member access</li>
+                        <li>A subscription to the selected plan</li>
+                        <li>A website with your chosen domain</li>
+                      </ul>
+                      <p className="pt-1">
+                        Your hosting panel credentials will be emailed to you automatically.
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 <Button

@@ -223,6 +223,14 @@ describe('Hosting Store Routes', () => {
       const planIds = response.body.plans.map((p: any) => p.id);
       expect(planIds).toContain(planId);
       expect(planIds).not.toContain(inactivePlanId);
+
+      const resellerPlan = response.body.plans.find((p: any) => p.id === resellerPlanId);
+      expect(resellerPlan).toBeDefined();
+      expect(resellerPlan.is_reseller_plan).toBe(true);
+
+      const basicPlan = response.body.plans.find((p: any) => p.id === planId);
+      expect(basicPlan).toBeDefined();
+      expect(basicPlan.is_reseller_plan).toBe(false);
     });
   });
 
