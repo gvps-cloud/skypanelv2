@@ -265,7 +265,6 @@ if (newCols !== colsRef.current || newRows !== rowsRef.current) {
     }
 
     try {
-      console.log('Attempting WebSocket connection to:', wsUrl);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
       setStatus('connecting');

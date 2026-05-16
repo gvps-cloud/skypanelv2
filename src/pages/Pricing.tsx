@@ -312,7 +312,6 @@ const PricingPage: React.FC = () => {
         const vpsPayload = vpsResult.value as { enabled?: boolean; plans?: VPSPlan[] };
         const vpsOn = vpsPayload.enabled !== false;
         setVpsProductEnabled(vpsOn);
-        console.log('VPS plans loaded:', vpsPayload.plans?.length || 0);
         setVpsPlans(vpsPayload.plans || []);
       } else {
         console.error('Failed to load VPS pricing data:', vpsResult.reason);

@@ -2014,7 +2014,6 @@ const Admin: React.FC = () => {
   // Reorder providers
   const reorderProviders = async (providerIds: string[]) => {
     try {
-      console.log("Reordering providers:", providerIds);
       await apiClient.put('/admin/providers/reorder', { providerIds });
       toast.success("Provider order updated successfully");
     } catch (e: any) {

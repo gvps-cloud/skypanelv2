@@ -107,8 +107,6 @@ export const ContactMethodManager: React.FC<ContactMethodManagerProps> = ({ toke
   const updateMethod = async (methodType: string, data: any) => {
     setSubmitting(methodType);
     try {
-      console.log('[ContactMethodManager] Updating method', { methodType, data });
-      
       const responseData = await apiClient.put<{ method: ContactMethod }>(
         `/admin/contact/methods/${methodType}`,
         data
@@ -122,7 +120,6 @@ export const ContactMethodManager: React.FC<ContactMethodManagerProps> = ({ toke
         description: 'Changes have been saved and will appear on the public contact page'
       });
       
-      console.log('[ContactMethodManager] Successfully updated method', { methodType });
     } catch (error: any) {
       console.error('[ContactMethodManager] Error updating method', { methodType }, error);
       toast.error(`Failed to update ${methodType} contact method`, {
@@ -206,7 +203,7 @@ const EmailMethodForm: React.FC<EmailMethodFormProps> = ({ method, onSave, isSub
   }, [method, form]);
 
   const handleSubmit = async (data: EmailFormData) => {
-    console.log('[EmailMethodForm] Submitting data:', data);
+
     try {
       await onSave(data);
     } catch (error) {
@@ -355,7 +352,7 @@ const TicketMethodForm: React.FC<TicketMethodFormProps> = ({ method, onSave, isS
   };
 
   const handleSubmit = async (data: TicketFormData) => {
-    console.log('[TicketMethodForm] Submitting data:', data);
+
     try {
       await onSave(data);
     } catch (error) {
@@ -543,7 +540,7 @@ const PhoneMethodForm: React.FC<PhoneMethodFormProps> = ({ method, onSave, isSub
   }, [method, form]);
 
   const handleSubmit = async (data: PhoneFormData) => {
-    console.log('[PhoneMethodForm] Submitting data:', data);
+
     try {
       await onSave(data);
     } catch (error) {
@@ -681,7 +678,7 @@ const OfficeMethodForm: React.FC<OfficeMethodFormProps> = ({ method, onSave, isS
   }, [method, form]);
 
   const handleSubmit = async (data: OfficeFormData) => {
-    console.log('[OfficeMethodForm] Submitting data:', data);
+
     try {
       await onSave(data);
     } catch (error) {
