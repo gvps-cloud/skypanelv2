@@ -108,5 +108,5 @@ Hourly billing records linking `volumes` → `organizations` with size and rate 
 
 ## Linode Coverage
 
-See `docs/linode-coverage-matrix.md` for the Linode API coverage matrix.
-See `docs/linode-feature-roadmap.md` for the feature roadmap including volume management.
+See [Linode Coverage Matrix](linode-coverage-matrix.md) for the Linode API coverage matrix.
+See [Linode Feature Roadmap](linode-feature-roadmap.md) for the feature roadmap including volume management.

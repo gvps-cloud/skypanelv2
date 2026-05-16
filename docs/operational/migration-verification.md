@@ -43,7 +43,7 @@ After running migrations, verify:
 
 ```bash
 # Verify expected tables exist
-psql "$DATABASE_URL" -c "\dt" | Select-String "public |"
+psql "$DATABASE_URL" -c "\dt" | grep "public |"
 
 # Check specific table structure
 psql "$DATABASE_URL" -c "\d activity_logs"

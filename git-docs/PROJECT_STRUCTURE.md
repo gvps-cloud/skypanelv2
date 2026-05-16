@@ -699,13 +699,15 @@ skypanelv2/
 │       ├── package.json
 │       └── tsconfig.json
 │
-├── migrations/                             # Sequential SQL migrations (72 files)
+├── migrations/                             # Sequential SQL migrations (76 files)
 │   ├── 001_initial_schema.sql
 │   ├── 002_relax_activity_logs_constraint.sql
 │   ├── 003_remove_legacy_container_artifacts.sql
-│   ├── ...                                 # (3–070 omitted for brevity)
-│   ├── 071_create_blog.sql
-│   └── 072_add_linode_platform_integration.sql
+│   ├── ...                                 # (3–072 omitted for brevity)
+│   ├── 073_add_rate_limit_ip_rules.sql
+│   ├── 074_add_activity_logs_ip_index.sql
+│   ├── 075_add_user_account_status.sql
+│   └── 076_reconcile_role_permissions.sql
 │
 ├── scripts/                                # Node.js utility scripts (37 files)
 │   ├── lib/
@@ -796,32 +798,38 @@ skypanelv2/
 ├── config/
 │   └── mcporter.json
 │
-├── docs/                                   # Documentation
+├── docs/                                   # Operational & feature documentation
 │   ├── README.md
-│   ├── PWA_SETUP.md
-│   ├── SECURITY.md
-│   ├── coverage-baseline.md
-│   ├── dependency-analysis.md
-│   ├── dependency-review.md
-│   ├── enhance-hosting-detail-coverage.md
-│   ├── infrastructure-verification.md
-│   ├── linode-coverage-matrix.md
-│   ├── linode-feature-roadmap.md
-│   ├── migration-verification.md
-│   ├── notification-consolidation.md
-│   ├── pre-release-verification.md
-│   ├── production-checklist.md
-│   ├── rollout-checklist.md
-│   ├── volumes-user-flow.md
-│   └── XSS_PROTECTION_SUMMARY.md
+│   ├── security/
+│   │   ├── POLICY.md
+│   │   └── XSS_PROTECTION.md
+│   ├── operational/
+│   │   ├── production-checklist.md
+│   │   ├── pre-release-verification.md
+│   │   ├── rollout-checklist.md
+│   │   ├── infrastructure-verification.md
+│   │   └── migration-verification.md
+│   ├── dependency/
+│   │   ├── review.md
+│   │   └── analysis.md
+│   ├── coverage/
+│   │   └── baseline.md
+│   └── features/
+│       ├── pwa-setup.md
+│       ├── linode-coverage-matrix.md
+│       ├── linode-feature-roadmap.md
+│       ├── enhance-hosting-coverage.md
+│       ├── notification-consolidation.md
+│       └── volumes-user-flow.md
 │
 ├── git-docs/                               # Prose documentation
 │   ├── ARCHITECTURE.md
 │   ├── BACKEND.md
-│   ├── CODE_WIKI.md
+│   ├── CLI.md
 │   ├── DATABASE.md
 │   ├── DEPLOYMENT.md
 │   ├── DEVELOPMENT.md
+│   ├── EGRESS_BILLING.md
 │   ├── FEATURES.md
 │   ├── FRONTEND.md
 │   ├── PROJECT_STRUCTURE.md                # This file
@@ -872,10 +880,8 @@ skypanelv2/
 ├── .emdash.json
 ├── AGENTS.md                               # AI agent coding guidelines
 ├── CLAUDE.md                               # Claude Code development reference
-├── GEMINI.md                               # Gemini development reference
 ├── LICENSE
 ├── README.md
-├── egress-readme.md
 ├── IP-WALL-OF-SHAME.md
 ├── new_component.tsx
 ├── skills-lock.json
@@ -905,7 +911,7 @@ skypanelv2/
 
 | Area | Count |
 |------|-------|
-| SQL Migrations | 71 |
+| SQL Migrations | 76 |
 | API Route Files | ~100 |
 | API Service Files | ~65 |
 | shadcn/ui Components | ~50 |

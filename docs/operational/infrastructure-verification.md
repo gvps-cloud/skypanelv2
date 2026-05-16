@@ -170,9 +170,7 @@ npx pm2 logs --lines 50
 For local validation-only boots, avoid the default production ports and disable startup side effects so schedulers and external refreshes do not run:
 
 ```bash
-$env:STARTUP_SIDE_EFFECTS_ENABLED="false"
-$env:PORT="3101"
-npx pm2 start ecosystem.config.cjs --env production
+STARTUP_SIDE_EFFECTS_ENABLED=false PORT=3101 npx pm2 start ecosystem.config.cjs --env production
 ```
 
 ---
@@ -190,7 +188,7 @@ curl -s https://yourdomain.com/api/health | jq .
 # Scheduler status
 # For real production boots, check PM2 logs for scheduler activity.
 # For validation-only boots with STARTUP_SIDE_EFFECTS_ENABLED=false, confirm the skip message instead.
-npx pm2 logs --lines 100 | Select-String "scheduler|Startup side effects disabled"
+npx pm2 logs --lines 100 | grep -E "scheduler|Startup side effects disabled"
 ```
 
 ---
@@ -215,6 +213,6 @@ echo | openssl s_client -connect yourdomain.com:443 2>/dev/null | openssl x509 -
 # Ensure not_expired is > 30 days
 
 # Check TLS version
-echo | openssl s_client -connect yourdomain.com:443 2>/dev/null | openssl x509 -noout -text | Select-String "Protocol"
+echo | openssl s_client -connect yourdomain.com:443 2>/dev/null | openssl x509 -noout -text | grep "Protocol"
 # Expected: TLSv1.2+ only
 ```

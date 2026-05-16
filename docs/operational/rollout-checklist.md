@@ -6,13 +6,7 @@ Step-by-step procedure for deploying a new release to production.
 
 ## Pre-Rollout (5–10 minutes)
 
-1. **Verify all pre-release checks pass**
-   ```bash
-   npm run verify:prod
-   node scripts/verify-env.js
-   ```
-
-   Note: `npm run scan:code` now returns `0` findings in the current repo state. The immutable bootstrap migration `migrations/001_initial_schema.sql` is excluded from the gate scan because its seeded bcrypt hash is an intentional false positive, not a runtime secret.
+1. **Complete [Pre-Release Verification](pre-release-verification.md)** — run the full gate procedure and confirm all checks pass.
 
 2. **Confirm pending database migrations are understood**
    Review new files in `migrations/` and ensure they are additive and safe before rollout.

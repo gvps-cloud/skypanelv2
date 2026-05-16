@@ -26,7 +26,7 @@ npx depcheck
 ```
 - Identify newly unused packages (may have been replaced by refactoring)
 - Identify missing dependencies (packages used but not listed)
-- Update `docs/dependency-analysis.md` with findings
+- Update [Dependency Analysis](analysis.md) with findings
 
 ### 4. Review Lockfile for Anomalies
 ```bash
@@ -124,12 +124,4 @@ Before adding a new package:
 
 ## SBOM
 
-Generate a Software Bill of Materials for vulnerability scanning:
-
-```bash
-# Full SBOM (CycloneDX format)
-npx @cyclonedx/cyclonedx-npm --output-file sbom.json
-
-# Quick inventory
-npm ls --depth=0 > dependency-inventory.txt
-```
+See [Security Policy](../security/POLICY.md#software-bill-of-materials-sbom) for the SBOM generation procedure.

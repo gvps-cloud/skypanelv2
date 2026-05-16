@@ -47,7 +47,7 @@ Detailed documentation is organized in the [`git-docs/`](./git-docs/) directory:
 | [Architecture](./git-docs/ARCHITECTURE.md) | System overview, high-level architecture, application flow diagrams (auth, provisioning, billing, SSH, notifications, payments) |
 | [Frontend](./git-docs/FRONTEND.md) | React tech stack, route map, context providers, key components |
 | [Backend](./git-docs/BACKEND.md) | Express tech stack, API route inventory, middleware pipeline, service layer, provider architecture |
-| [Database](./git-docs/DATABASE.md) | Entity relationships, table definitions, migration history (001–071) |
+| [Database](./git-docs/DATABASE.md) | Entity relationships, table definitions, migration history (001–076) |
 | [Features](./git-docs/FEATURES.md) | Core features — VPS, hosting, billing, fraud, refunds, orgs, auth, real-time, admin, UI/UX |
 | [Security](./git-docs/SECURITY.md) | Encryption, access control, rate limiting tiers |
 | [Development](./git-docs/DEVELOPMENT.md) | Prerequisites, quick start, environment variables, icons/logo, dev commands |
@@ -55,6 +55,7 @@ Detailed documentation is organized in the [`git-docs/`](./git-docs/) directory:
 | [Testing](./git-docs/TESTING.md) | Test stack, test locations, running tests, manual testing checklist |
 | [CLI Toolkit](./git-docs/CLI.md) | Admin CLI tool — user management, billing, VPS, hosting, org, ticket commands |
 | [Project Structure](./git-docs/PROJECT_STRUCTURE.md) | Full directory tree |
+| [Egress Billing](./git-docs/EGRESS_BILLING.md) | Egress credit system — architecture, billing, purchase flow, abuse prevention |
 
 ### Additional References
 
@@ -62,7 +63,6 @@ Detailed documentation is organized in the [`git-docs/`](./git-docs/) directory:
 |---|---|
 | [`AGENTS.md`](./AGENTS.md) | Coding agent guidelines — current app state, structure, patterns, and practical guidance |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code development reference |
-| [`GEMINI.md`](./GEMINI.md) | Gemini coding agent development reference |
 | [`repo-docs/ENVIRONMENT_VARIABLES.md`](./repo-docs/ENVIRONMENT_VARIABLES.md) | Complete environment variable reference |
 | [`repo-docs/ADMIN_COMPONENTS.md`](./repo-docs/ADMIN_COMPONENTS.md) | Admin dashboard component reference |
 | [`repo-docs/ADMIN_TROUBLESHOOTING.md`](./repo-docs/ADMIN_TROUBLESHOOTING.md) | Admin troubleshooting guide |
@@ -72,6 +72,29 @@ Detailed documentation is organized in the [`git-docs/`](./git-docs/) directory:
 | [`api/services/providers/CACHING.md`](./api/services/providers/CACHING.md) | Provider caching strategy |
 | [`api/services/providers/API_DOCUMENTATION.md`](./api/services/providers/API_DOCUMENTATION.md) | Provider API documentation |
 | [`scripts/README.md`](./scripts/README.md) | Utility scripts reference |
+
+### Operational Documentation
+
+| Document | Description |
+|---|---|
+| [Security Policy](./docs/security/POLICY.md) | Vulnerability reporting, dependency audit gates, SBOM, CORS |
+| [Production Checklist](./docs/operational/production-checklist.md) | Pre-deployment checklist (~60 items) |
+| [Pre-Release Verification](./docs/operational/pre-release-verification.md) | Verification procedure before every release |
+| [Rollout Checklist](./docs/operational/rollout-checklist.md) | Step-by-step deployment and rollback |
+| [Infrastructure Verification](./docs/operational/infrastructure-verification.md) | Proxy, PM2, health, TLS verification |
+| [Migration Verification](./docs/operational/migration-verification.md) | Database migration procedures |
+| [Test Coverage Baseline](./docs/coverage/baseline.md) | Current test coverage snapshot and goals |
+| [Dependency Review](./docs/dependency/review.md) | Weekly dependency review process |
+| [Dependency Analysis](./docs/dependency/analysis.md) | Unused dependency analysis report |
+| [PWA Setup](./docs/features/pwa-setup.md) | Progressive Web App configuration |
+| [XSS Protection](./docs/security/XSS_PROTECTION.md) | XSS protection implementation record |
+| [Linode Coverage Matrix](./docs/features/linode-coverage-matrix.md) | Frontend-to-API-to-Linode mapping |
+| [Linode Feature Roadmap](./docs/features/linode-feature-roadmap.md) | Feature parity and backlog |
+| [Enhance Hosting Coverage](./docs/features/enhance-hosting-coverage.md) | Enhance API operation coverage matrix |
+| [Notification Consolidation](./docs/features/notification-consolidation.md) | Notification route consolidation plan |
+| [Volumes User Flow](./docs/features/volumes-user-flow.md) | Block storage volume management |
+
+> **Note**: Root-level files `IDENTITY.md`, `MEMORY.md`, `SOUL.md`, `TOOLS.md`, `USER.md`, and `HEARTBEAT.md` are AutoClaw agent workspace configuration — not project documentation.
 
 ---
 

@@ -37,17 +37,7 @@ npm run verify:prod
 npm run verify:env
 ```
 
-Current local status on 2026-04-19:
-
-- `npm run check` passes
-- `npm run lint` passes with warnings only
-- `npm run test:security` passes (`143` tests)
-- `npm run test:coverage` passes (`50` files, `396` tests, `12.34%` lines)
-- `npm run docs:api:audit` passes (`0` missing, `0` stale, `0` auth mismatches)
-- `npm run scan:code` passes with `0` findings; the immutable seeded bcrypt hash in `migrations/001_initial_schema.sql` is excluded from the gate scan as a documented false positive
-- `npm run audit:security` passes at the current threshold; `1` low PM2 advisory with no current fix remains
-- `npm run verify:prod` now completes successfully under the current script thresholds, including the clean Semgrep gate
-- `npm run verify:env` passes for the current local `.env`, with the expected warning while `NODE_ENV` remains `development`
+> For current coverage numbers and test counts, see [Coverage Baseline](coverage-baseline.md).
 
 ---
 
@@ -70,10 +60,7 @@ npm run preview
 Use this only for local validation when you need to confirm production-mode boot behavior without starting schedulers or other startup side effects:
 
 ```bash
-$env:STARTUP_SIDE_EFFECTS_ENABLED="false"
-$env:PORT="3101"
-$env:UI_PORT="4173"
-npm run build
+STARTUP_SIDE_EFFECTS_ENABLED=false PORT=3101 UI_PORT=4173 npm run build
 npx pm2 start ecosystem.config.cjs --env production
 ```
 
@@ -81,17 +68,15 @@ Then verify:
 
 ```bash
 npm run pm2:list
-curl.exe -I -H "X-Forwarded-Proto: https" http://127.0.0.1:3101/api/health
-curl.exe -I http://127.0.0.1:4173
+curl -I -H "X-Forwarded-Proto: https" http://127.0.0.1:3101/api/health
+curl -I http://127.0.0.1:4173
 ```
 
 Clean up after validation:
 
 ```bash
 npm run pm2:stop
-Remove-Item Env:STARTUP_SIDE_EFFECTS_ENABLED -ErrorAction SilentlyContinue
-Remove-Item Env:PORT -ErrorAction SilentlyContinue
-Remove-Item Env:UI_PORT -ErrorAction SilentlyContinue
+unset STARTUP_SIDE_EFFECTS_ENABLED PORT UI_PORT
 ```
 
 ---

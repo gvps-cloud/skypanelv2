@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please email **security@<company-domain>** with:
+If you discover a security vulnerability, please email **security@gvps.cloud** with:
 - A description of the issue and its impact
 - Reproduction steps (if possible)
 - Your suggested mitigation (if any)
@@ -106,9 +106,9 @@ Every week, an operator shall perform a manual dependency review:
 1. **Check for outdated packages**: `npm outdated`
 2. **Check for vulnerabilities**: `npm audit`
 3. **Review changelogs** for any packages with updates available
-4. **Create PRs** for high/critical severity advisories following the process in `docs/dependency-review.md`
+4. **Create PRs** for high/critical severity advisories following the process in [Dependency Review](../dependency/review.md)
 
-**Detailed checklist**: See [docs/dependency-review.md](docs/dependency-review.md) for the complete review process, including high-severity advisory handling, testing requirements, and prohibited automation.
+**Detailed checklist**: See [Dependency Review](../dependency/review.md) for the complete review process, including high-severity advisory handling, testing requirements, and prohibited automation.
 
 **Prohibited automation**: No Dependabot, Renovate, Snyk, Socket.dev, or any hosted dependency automation service. All dependency updates require manual operator review.
 

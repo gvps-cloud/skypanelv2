@@ -83,12 +83,7 @@ Pre-deployment verification checklist for SkyPanelV2. Complete every item before
 
 ## 8. Pre-Release Verification
 
-- [ ] Run `npm run verify:prod` — full production readiness gate
-- [ ] Smoke test: login, create VPS, check billing, view activity
-- [ ] Smoke test: admin panel — user management, platform settings
-- [ ] SSE notifications stream connects and delivers events
-- [ ] PayPal payment flow completes end-to-end
-- [ ] Email delivery works (password reset, contact form, notifications)
+See [Pre-Release Verification](pre-release-verification.md) for the full verification procedure.
 
 ## 9. Rollback Plan
 

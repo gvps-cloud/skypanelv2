@@ -147,7 +147,7 @@ The `Logo` component (`src/components/Logo.tsx`) renders an `<img>` tag pointing
 3. Place the generated files in `public/` (`favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, etc.)
 4. Update `public/site.webmanifest` if icon filenames change
 
-See [`docs/PWA_SETUP.md`](../docs/PWA_SETUP.md) for additional PWA-specific icon requirements (192x192 and 512x512 PNGs).
+See [PWA Setup](../docs/features/pwa-setup.md) for additional PWA-specific icon requirements (192x192 and 512x512 PNGs).
 
 ---
 

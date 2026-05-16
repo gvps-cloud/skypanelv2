@@ -154,7 +154,7 @@ Relationship highlights
 
 ## Migration History
 
-The database schema is managed through **72 sequential SQL migrations** in the `migrations/` directory:
+The database schema is managed through **76 sequential SQL migrations** in the `migrations/` directory:
 
 | Migration | Description |
 | --------- | ----------- |
@@ -202,3 +202,7 @@ The database schema is managed through **72 sequential SQL migrations** in the `
 | `070` | Hosting subscription last warning — last_warning_sent_at column on hosting_subscriptions for balance warning deduplication |
 | `071` | Blog system — blog_categories, blog_posts (with slug+year unique, soft delete), blog_tags, blog_post_tags junction table |
 | `072` | Linode platform integration — add Linode as a managed platform integration with configuration and API token storage |
+| `073` | Persistent rate limit IP rules — trusted and blocked IP table |
+| `074` | Activity logs IP address index for admin queries |
+| `075` | User account status — status, status_reason, status_updated_at columns |
+| `076` | Reconcile predefined organization roles and permissions for billing, egress, and Enhance hosting access |
