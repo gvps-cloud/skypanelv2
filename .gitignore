@@ -37,6 +37,7 @@ uploads/
 temp/
 backups/
 tmp/
+data/
 
 # Database files
 *.db
