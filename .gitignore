@@ -78,6 +78,7 @@ USER.md
 .claude-docs/
 .claude
 .kiro
+.zcode
 *.kilo
 docker-compose.override.yml
 
