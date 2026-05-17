@@ -626,13 +626,68 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         );
       }
 
-      enhanceSubscription = matchedSubscription;
+      // If the existing subscription is soft-deleted, force-delete it and create a fresh one
+      if (matchedSubscription.status === 'deleted') {
+        console.info(`Found soft-deleted subscription ${matchedSubscription.id} — force-deleting before re-creation`);
+        try {
+          await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, String(matchedSubscription.id), { force: true });
+        } catch (forceErr) {
+          console.warn("Master-org force-delete of deleted subscription failed, trying customer org:", forceErr instanceof Error ? forceErr.message : forceErr);
+          await EnhanceService.deleteSubscription(onboardingResult.enhanceCustomerId, String(matchedSubscription.id), { force: true });
+        }
+        enhanceSubscription = await EnhanceService.createCustomerSubscription(
+          config.ENHANCE_MASTER_ORG_ID,
+          onboardingResult.enhanceCustomerId,
+          { planId: enhancePlanId }
+        );
+        createdRemoteSubscription = true;
+      } else {
+        enhanceSubscription = matchedSubscription;
+      }
     }
     const enhanceSubscriptionId = Number(enhanceSubscription.id);
     if (!Number.isInteger(enhanceSubscriptionId) || enhanceSubscriptionId <= 0) {
       throw new Error("Enhance subscription creation returned an invalid subscription id");
     }
     remoteEnhanceSubscriptionId = String(enhanceSubscription.id);
+
+    // Check domain availability — clean up any stale deleted-site entries before creating
+    try {
+      const domainCheck = await EnhanceService.checkDomain(
+        onboardingResult.enhanceCustomerId,
+        resolvedDomain,
+      );
+      if (domainCheck.status === 'inUseDeletedSite') {
+        console.info(`Domain ${resolvedDomain} is in use by a deleted site — attempting force cleanup`);
+        const allWebsites = extractCollection<any>(
+          await EnhanceService.getWebsites(onboardingResult.enhanceCustomerId),
+        );
+        const deletedSite = allWebsites.find(
+          (w: any) => w.domain === resolvedDomain && w.status === 'deleted',
+        );
+        if (deletedSite?.id) {
+          try {
+            await EnhanceService.deleteWebsite(config.ENHANCE_MASTER_ORG_ID, deletedSite.id, { force: true });
+          } catch (forceErr) {
+            console.warn("Master-org force delete failed, trying customer org:", forceErr instanceof Error ? forceErr.message : forceErr);
+            await EnhanceService.deleteWebsite(onboardingResult.enhanceCustomerId, deletedSite.id, { force: true });
+          }
+        }
+      } else if (domainCheck.status === 'inUseCurrentOrg' || domainCheck.status === 'inUseAnotherOrg') {
+        throw createHttpError(
+          `The domain "${resolvedDomain}" is already in use by another hosting plan`,
+          400,
+        );
+      } else if (domainCheck.status === 'prohibited') {
+        throw createHttpError(
+          `The domain "${resolvedDomain}" is not available for hosting`,
+          400,
+        );
+      }
+    } catch (checkErr: any) {
+      if (checkErr.statusCode === 400 || checkErr.statusCode === 403) throw checkErr;
+      console.warn("Domain availability check failed (proceeding anyway):", checkErr instanceof Error ? checkErr.message : checkErr);
+    }
 
     // Create website — conditionally include serverGroupId only when the plan allows selection
     const websitePayload: Record<string, any> = {
@@ -902,7 +957,13 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
 
     if (sub.enhance_website_id) {
       try {
-        await EnhanceService.deleteWebsite(enhanceCustomerOrgId, sub.enhance_website_id);
+        try {
+          await EnhanceService.deleteWebsite(enhanceCustomerOrgId, sub.enhance_website_id, { force: true });
+        } catch (forceErr) {
+          // Force delete via customer org may fail (MO-only). Fall back to master org.
+          console.warn("Force-delete via customer org failed, trying master org:", forceErr instanceof Error ? forceErr.message : forceErr);
+          await EnhanceService.deleteWebsite(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, { force: true });
+        }
       } catch (enhanceErr) {
         const statusCode = enhanceErr instanceof EnhanceApiError
           ? (enhanceErr.statusCode || 502)
@@ -935,7 +996,12 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
 
     if (sub.enhance_subscription_id) {
       try {
-        await EnhanceService.deleteSubscription(enhanceCustomerOrgId, sub.enhance_subscription_id);
+        try {
+          await EnhanceService.deleteSubscription(enhanceCustomerOrgId, sub.enhance_subscription_id, { force: true });
+        } catch (forceErr) {
+          console.warn("Force-delete subscription via customer org failed, trying master org:", forceErr instanceof Error ? forceErr.message : forceErr);
+          await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, sub.enhance_subscription_id, { force: true });
+        }
       } catch (enhanceErr) {
         const statusCode = enhanceErr instanceof EnhanceApiError
           ? (enhanceErr.statusCode || 502)
@@ -967,7 +1033,7 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
     }
 
     await query(
-      `UPDATE hosting_subscriptions SET status = 'cancelled', cancelled_at = now(), updated_at = now() WHERE id = $1`,
+      `UPDATE hosting_subscriptions SET status = 'cancelled', cancelled_at = now(), enhance_subscription_id = NULL, enhance_website_id = NULL, updated_at = now() WHERE id = $1`,
       [id]
     );
 

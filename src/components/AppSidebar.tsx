@@ -307,55 +307,47 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           icon: LayoutDashboard,
           isActive: isDashboardActive,
         },
-        ...(hostingStatus?.enabled
+        ...((hostingStatus?.enabled || vpsProductStatus?.enabled)
           ? [
               {
-                title: "Web Hosting",
+                title: "Cloud",
                 url: "/hosting",
                 icon: Globe,
-                isActive: isHostingActive,
-              },
-            ]
-          : []),
-        ...(vpsProductStatus?.enabled
-          ? [
-              {
-                title: "Compute",
-                url: "/vps",
-                icon: Server,
-                isActive: isVpsActive,
+                isActive: isHostingActive || isVpsActive || isSshKeysActive,
                 items: [
-                  {
-                    title: "VPS",
-                    url: "/vps",
-                    isActive: isVpsActive,
-                  },
-                  {
-                    title: "SSH Keys",
-                    url: "/ssh-keys",
-                    isActive: isSshKeysActive,
-                  },
+                  ...(vpsProductStatus?.enabled
+                    ? [
+                        {
+                          title: "VPS",
+                          url: "/vps",
+                          isActive: isVpsActive,
+                        },
+                        {
+                          title: "SSH Keys",
+                          url: "/ssh-keys",
+                          isActive: isSshKeysActive,
+                        },
+                      ]
+                    : []),
+                  ...(hostingStatus?.enabled
+                    ? [
+                        {
+                          title: "Web Hosting",
+                          url: "/hosting",
+                          isActive: isHostingActive,
+                        },
+                      ]
+                    : []),
                 ],
               },
             ]
-          : [
-              {
-                title: "Organizations",
-                url: "/organizations",
-                icon: Building2,
-                isActive: pathname.startsWith("/organizations"),
-              },
-            ]),
-        ...(vpsProductStatus?.enabled
-          ? [
-              {
-                title: "Organizations",
-                url: "/organizations",
-                icon: Building2,
-                isActive: pathname.startsWith("/organizations"),
-              },
-            ]
           : []),
+        {
+          title: "Organizations",
+          url: "/organizations",
+          icon: Building2,
+          isActive: pathname.startsWith("/organizations"),
+        },
         {
           title: "Activity",
           url: "/activity",

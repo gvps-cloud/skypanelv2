@@ -419,12 +419,23 @@ export class EnhanceService {
     });
   }
 
-  static async deleteWebsite(orgId: string, websiteId: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}`, { method: 'DELETE' });
+  static async deleteWebsite(orgId: string, websiteId: string, options?: { force?: boolean }) {
+    const query = options?.force ? '?force=true' : '';
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}${query}`, { method: 'DELETE' });
   }
 
   static async getInstallableApps(orgId: string, subscriptionId: string | number) {
     return this.request<any>(`/orgs/${orgId}/subscriptions/${subscriptionId}/installable-apps`);
+  }
+
+  // ============================================================
+  // Domain Availability
+  // ============================================================
+  static async checkDomain(orgId: string, domain: string) {
+    return this.request<{ status: string; websiteId?: string }>(
+      `/orgs/${orgId}/domains/check`,
+      { method: 'POST', body: { domain } },
+    );
   }
 
   // ============================================================
