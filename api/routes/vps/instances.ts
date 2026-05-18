@@ -1085,6 +1085,9 @@ router.get("/:id", async (req: Request, res: Response) => {
 				rdnsEditable,
 				providerProgress,
 				progressPercent,
+				osDiskId: instanceRow.os_disk_id
+					? Number(instanceRow.os_disk_id)
+					: null,
 			},
 		});
 	} catch (err: any) {

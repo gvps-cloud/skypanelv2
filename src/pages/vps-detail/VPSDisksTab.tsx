@@ -1,12 +1,15 @@
 import {
 	AlertTriangle,
+	CheckCircle2,
 	Edit2,
 	HardDrive,
 	Key,
 	Loader2,
+	Monitor,
 	Plus,
 	RefreshCw,
 	Trash2,
+	X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -44,6 +47,7 @@ interface VPSDisksTabProps {
 	instanceLabel?: string;
 	instanceStatus?: string;
 	totalDiskAllocation?: number;
+	bootDiskId?: number | null;
 }
 
 type OrchestrationPhase =
@@ -58,11 +62,21 @@ export default function VPSDisksTab({
 	instanceLabel,
 	instanceStatus,
 	totalDiskAllocation,
+	bootDiskId: propBootDiskId,
 }: VPSDisksTabProps) {
 	const [disks, setDisks] = useState<Disk[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [actionLoading, setActionLoading] = useState<number | null>(null);
+	const [apiBootDiskId, setApiBootDiskId] = useState<number | null>(null);
+	const [localBootDiskId, setLocalBootDiskId] = useState<number | null>(null);
+	const [confirmOsDiskId, setConfirmOsDiskId] = useState<number | null>(null);
+	const [osDiskSaving, setOsDiskSaving] = useState(false);
+
+	const effectiveBootDiskId = useMemo(
+		() => localBootDiskId ?? apiBootDiskId ?? propBootDiskId ?? null,
+		[localBootDiskId, apiBootDiskId, propBootDiskId],
+	);
 
 	// Resize dialog state
 	const [resizeDialog, setResizeDialog] = useState<{
@@ -100,15 +114,23 @@ export default function VPSDisksTab({
 	const isRunning = instanceStatus === "running";
 	const isOrchestrating = resizePhase !== "idle" || createPhase !== "idle";
 
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const loadDisks = useCallback(async () => {
 		if (!instanceId) return;
 		setLoading(true);
 		setError(null);
 		try {
-			const data = await apiClient.get<{ disks: Disk[] }>(
-				`/vps/${instanceId}/disks`,
-			);
+			const data = await apiClient.get<{
+				disks: Disk[];
+				bootDiskId?: number | null;
+			}>(`/vps/${instanceId}/disks`);
 			setDisks(data.disks ?? []);
+			if (data.bootDiskId !== undefined) {
+				setApiBootDiskId(data.bootDiskId);
+				if (localBootDiskId === null) {
+					setLocalBootDiskId(data.bootDiskId);
+				}
+			}
 		} catch (err) {
 			const message =
 				err instanceof Error ? err.message : "Failed to load disks";
@@ -196,6 +218,23 @@ export default function VPSDisksTab({
 			);
 		} finally {
 			setActionLoading(null);
+		}
+	};
+
+	const handleSetOsDisk = async (diskId: number) => {
+		if (!instanceId) return;
+		setOsDiskSaving(true);
+		try {
+			await apiClient.put(`/vps/${instanceId}/os-disk`, { diskId });
+			setLocalBootDiskId(diskId);
+			setConfirmOsDiskId(null);
+			toast.success("OS drive updated");
+		} catch (err) {
+			toast.error(
+				err instanceof Error ? err.message : "Failed to set OS drive",
+			);
+		} finally {
+			setOsDiskSaving(false);
 		}
 	};
 
@@ -488,79 +527,138 @@ export default function VPSDisksTab({
 					</div>
 				) : (
 					<div className="space-y-3">
-						{disks.map((disk) => (
-							<div
-								key={disk.id}
-								className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-border p-4"
-							>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2">
-										<HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-										<span className="font-medium text-sm text-foreground truncate">
-											{disk.label}
-										</span>
-										<span
-											className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-												disk.status === "ready"
-													? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-													: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-											}`}
-										>
-											{disk.status}
-										</span>
-									</div>
-									<div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-										<span>{(disk.size / 1024).toFixed(1)} GB</span>
-										<span>{disk.filesystem || "raw"}</span>
-										<span>ID: {disk.id}</span>
-									</div>
-								</div>
+						{disks.map((disk) => {
+							const isSwap = disk.filesystem === "swap";
+							const isOsDisk = effectiveBootDiskId === disk.id;
+							const showConfirm = confirmOsDiskId === disk.id;
 
-								<div className="flex flex-wrap gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() =>
-											openResizeDialog(disk.id, disk.size, disk.label)
-										}
-										disabled={actionLoading === disk.id || isOrchestrating}
-										title="Resize disk"
-									>
-										<Edit2 className="h-3 w-3" />
-										<span className="ml-1">Resize</span>
-									</Button>
-									{disk.filesystem !== "swap" && (
+							return (
+								<div
+									key={disk.id}
+									className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-border p-4"
+								>
+									<div className="flex-1 min-w-0">
+										<div className="flex items-center gap-2">
+											<HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+											<span className="font-medium text-sm text-foreground truncate">
+												{disk.label}
+											</span>
+											<span
+												className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+													disk.status === "ready"
+														? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+														: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+												}`}
+											>
+												{disk.status}
+											</span>
+											{isOsDisk && !isSwap && (
+												<span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+													<Monitor className="h-3 w-3 mr-1" />
+													OS
+												</span>
+											)}
+										</div>
+										<div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+											<span>{(disk.size / 1024).toFixed(1)} GB</span>
+											<span>{disk.filesystem || "raw"}</span>
+											<span>ID: {disk.id}</span>
+										</div>
+									</div>
+
+									<div className="flex flex-wrap gap-2">
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() => handlePasswordReset(disk.id, disk.label)}
+											onClick={() =>
+												openResizeDialog(disk.id, disk.size, disk.label)
+											}
 											disabled={actionLoading === disk.id || isOrchestrating}
-											title="Reset root password"
+											title="Resize disk"
 										>
-											<Key className="h-3 w-3" />
-											<span className="ml-1">Password</span>
+											<Edit2 className="h-3 w-3" />
+											<span className="ml-1">Resize</span>
 										</Button>
-									)}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() =>
-											setDeleteConfirm({
-												open: true,
-												diskId: disk.id,
-												diskLabel: disk.label,
-											})
-										}
-										disabled={actionLoading === disk.id || isOrchestrating}
-										className="text-destructive hover:text-destructive"
-										title="Delete disk"
-									>
-										<Trash2 className="h-3 w-3" />
-										<span className="ml-1">Delete</span>
-									</Button>
+										{!isSwap && isOsDisk && (
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => handlePasswordReset(disk.id, disk.label)}
+												disabled={actionLoading === disk.id || isOrchestrating}
+												title="Reset root password"
+											>
+												<Key className="h-3 w-3" />
+												<span className="ml-1">Password</span>
+											</Button>
+										)}
+										{!isSwap && !isOsDisk && (
+											<>
+												{!showConfirm ? (
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => setConfirmOsDiskId(disk.id)}
+														disabled={isOrchestrating || osDiskSaving}
+														title="Set this disk as the OS drive to enable password reset"
+														className="text-primary hover:text-primary"
+													>
+														<Monitor className="h-3 w-3" />
+														<span className="ml-1">Set as OS drive</span>
+													</Button>
+												) : (
+													<div className="flex items-center gap-1.5">
+														<span className="text-xs text-muted-foreground">
+															Confirm?
+														</span>
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => handleSetOsDisk(disk.id)}
+															disabled={osDiskSaving}
+															className="h-8 px-2"
+														>
+															{osDiskSaving ? (
+																<Loader2 className="h-3 w-3 animate-spin" />
+															) : (
+																<CheckCircle2 className="h-3 w-3" />
+															)}
+															<span className="ml-1">Yes</span>
+														</Button>
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => setConfirmOsDiskId(null)}
+															disabled={osDiskSaving}
+															className="h-8 px-2"
+														>
+															<X className="h-3 w-3" />
+															<span className="ml-1">No</span>
+														</Button>
+													</div>
+												)}
+											</>
+										)}
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setDeleteConfirm({
+													open: true,
+													diskId: disk.id,
+													diskLabel: disk.label,
+												})
+											}
+											disabled={actionLoading === disk.id || isOrchestrating}
+											className="text-destructive hover:text-destructive"
+											title="Delete disk"
+										>
+											<Trash2 className="h-3 w-3" />
+											<span className="ml-1">Delete</span>
+										</Button>
+									</div>
 								</div>
-							</div>
-						))}
+							);
+						})}
 					</div>
 				)}
 			</div>
