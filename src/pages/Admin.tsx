@@ -2363,7 +2363,7 @@ const Admin: React.FC = () => {
       {isDashboardView ? (
         <>
           <div className="relative hidden h-20 overflow-hidden rounded-lg border border-primary/25 md:block md:h-24">
-            <MatrixRain density="subdued" className="opacity-45" />
+            <MatrixRain density="subdued" mode="rain" className="opacity-45" />
           </div>
           <TerminalPanel title="ADMIN CONSOLE" bodyClassName="p-0" className="font-mono">
             <div className="space-y-3 p-5 sm:p-7 md:p-9">

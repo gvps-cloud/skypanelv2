@@ -29,6 +29,16 @@ const mockDisks = [
   },
 ];
 
+const mockSwapDisk = {
+  id: 2,
+  label: "512 MB Swap",
+  status: "ready",
+  size: 512,
+  filesystem: "swap",
+  created: "2026-01-01T00:00:00Z",
+  updated: "2026-01-01T00:00:00Z",
+};
+
 function mockResponse(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -44,16 +54,22 @@ function setupFetchMock(data: any) {
     if (method === "GET" && /\/vps\/.*\/disks/.test(url)) {
       return mockResponse(data);
     }
+    if (method === "GET" && /\/vps\/vps-001$/.test(url)) {
+      return mockResponse({ status: "stopped" });
+    }
     if (method === "DELETE" && /\/vps\/.*\/disks\/\d+$/.test(url)) {
       return mockResponse({ success: true });
     }
     if (method === "POST" && /\/vps\/.*\/disks\/\d+\/resize/.test(url)) {
       return mockResponse({ success: true });
     }
-    if (method === "POST" && /\/vps\/.*\/disks\/\d+\/clone/.test(url)) {
-      return mockResponse({ disk: { id: 4, label: "Disk 1-clone" } });
-    }
     if (method === "POST" && /\/vps\/.*\/disks\/\d+\/password/.test(url)) {
+      return mockResponse({ success: true });
+    }
+    if (method === "POST" && /\/vps\/.*\/disks$/.test(url)) {
+      return mockResponse({ success: true });
+    }
+    if (method === "POST" && /\/vps\/.*\/(shutdown|boot)/.test(url)) {
       return mockResponse({ success: true });
     }
     throw new Error(`Unhandled fetch: ${method} ${url}`);
@@ -61,11 +77,21 @@ function setupFetchMock(data: any) {
   vi.stubGlobal("fetch", mockFetch);
 }
 
-function renderComponent(instanceId = "vps-001", instanceLabel = "TestVPS") {
+function renderComponent(
+  instanceId = "vps-001",
+  instanceLabel = "TestVPS",
+  instanceStatus = "stopped",
+  totalDiskAllocation?: number,
+) {
   return renderWithAuth(
     <MemoryRouter>
-      <VPSDisksTab instanceId={instanceId} instanceLabel={instanceLabel} />
-    </MemoryRouter>
+      <VPSDisksTab
+        instanceId={instanceId}
+        instanceLabel={instanceLabel}
+        instanceStatus={instanceStatus}
+        totalDiskAllocation={totalDiskAllocation}
+      />
+    </MemoryRouter>,
   );
 }
 
@@ -92,7 +118,7 @@ describe("VPSDisksTab", () => {
   describe("Error state", () => {
     it("shows error message when API fails", async () => {
       mockFetch.mockResolvedValue(
-        new Response("Server error", { status: 500, headers: { "Content-Type": "text/plain" } })
+        new Response("Server error", { status: 500, headers: { "Content-Type": "text/plain" } }),
       );
       vi.stubGlobal("fetch", mockFetch);
 
@@ -127,7 +153,7 @@ describe("VPSDisksTab", () => {
       });
     });
 
-    it("renders action buttons", async () => {
+    it("renders Resize, Password, and Delete buttons for ext4 disk", async () => {
       setupFetchMock({ disks: mockDisks });
 
       renderComponent();
@@ -137,9 +163,20 @@ describe("VPSDisksTab", () => {
       });
 
       expect(screen.getByRole("button", { name: /resize/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /clone/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /password/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
+    });
+
+    it("does not render Password button for swap disks", async () => {
+      setupFetchMock({ disks: [mockSwapDisk] });
+
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("512 MB Swap")).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole("button", { name: /password/i })).not.toBeInTheDocument();
     });
 
     it("displays section header with instance label", async () => {
@@ -151,33 +188,44 @@ describe("VPSDisksTab", () => {
         expect(screen.getByText(/myserver-production/i)).toBeInTheDocument();
       });
     });
+  });
 
-    it("renders section header with custom instance label", async () => {
-      setupFetchMock({ disks: [] });
+  describe("Storage allocation display", () => {
+    it("shows allocation info when totalDiskAllocation is provided", async () => {
+      setupFetchMock({ disks: mockDisks });
 
-      renderComponent("vps-001", "CustomServer");
+      renderComponent("vps-001", "TestVPS", "stopped", 81920);
 
       await waitFor(() => {
-        expect(screen.getByText(/customserver/i)).toBeInTheDocument();
+        expect(screen.getByText(/total:/i)).toBeInTheDocument();
+      });
+      expect(screen.getByText(/unallocated:/i)).toBeInTheDocument();
+    });
+
+    it("shows Create Disk button when unallocated space exists", async () => {
+      setupFetchMock({ disks: mockDisks });
+
+      renderComponent("vps-001", "TestVPS", "stopped", 81920);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /create disk/i })).toBeInTheDocument();
+      });
+    });
+
+    it("disables Create Disk when no unallocated space", async () => {
+      setupFetchMock({ disks: [...mockDisks, { ...mockDisks[0], id: 2, size: 30720 }] });
+
+      renderComponent("vps-001", "TestVPS", "stopped", 81920);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /create disk/i })).toBeDisabled();
       });
     });
   });
 
   describe("Delete action", () => {
-    it("shows error toast when delete fails", async () => {
-      mockFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = typeof input === "string" ? input : input.toString();
-        const method = init?.method || "GET";
-        if (method === "GET" && /\/vps\/.*\/disks/.test(url)) {
-          return mockResponse({ disks: mockDisks });
-        }
-        if (method === "DELETE") {
-          throw new Error("Delete failed");
-        }
-        throw new Error(`Unhandled: ${method} ${url}`);
-      });
-      vi.stubGlobal("fetch", mockFetch);
-      vi.stubGlobal("confirm", () => true);
+    it("shows confirmation dialog and deletes on confirm", async () => {
+      setupFetchMock({ disks: mockDisks });
 
       renderComponent();
 
@@ -189,7 +237,14 @@ describe("VPSDisksTab", () => {
       await userEvent.click(deleteBtn);
 
       await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith("Delete failed");
+        expect(screen.getByText(/delete disk/i)).toBeInTheDocument();
+      });
+
+      const confirmBtn = screen.getByRole("button", { name: /^delete$/i });
+      await userEvent.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(mockToastSuccess).toHaveBeenCalledWith('Disk "Ubuntu 22.04 LTS" deleted');
       });
     });
   });

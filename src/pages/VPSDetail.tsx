@@ -1968,7 +1968,12 @@ const VPSDetail: React.FC = () => {
             )}
 
             {activeTab === "disks" && (
-              <VPSDisksTab instanceId={detail?.id} instanceLabel={detail?.label} />
+              <VPSDisksTab
+                instanceId={detail?.id}
+                instanceLabel={detail?.label}
+                instanceStatus={detail?.status}
+                totalDiskAllocation={detail?.plan?.specs?.disk}
+              />
             )}
 
             {activeTab === "backups" && (
